@@ -1,0 +1,15 @@
+{
+  "scriptId": "YOUR_SCRIPT_ID_HERE",
+  "rootDir": ".",
+  "filePushOrder": [
+    "src/Code.js",
+    "src/Config.js",
+    "src/SheetManager.js",
+    "src/MailMerge.js",
+    "src/Tracking.js",
+    "src/SidebarHelpers.js",
+    "html/Sidebar.html",
+    "html/Dashboard.html",
+    "html/Settings.html"
+  ]
+}
