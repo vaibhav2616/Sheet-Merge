@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SheetMerge Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0f1117;
+      --surface: #1a1d27;
+      --s2:      #22263a;
+      --border:  #2e3354;
+      --accent:  #5b6af0;
+      --success: #22c55e;
+      --warn:    #f59e0b;
+      --danger:  #ef4444;
+      --text:    #e2e8f0;
+      --muted:   #64748b;
+      --r:       10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      font-size: 13px;
+    }
+    h1 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .kpi {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .kpi.sent::before    { background: var(--success); }
+    .kpi.failed::before  { background: var(--danger);  }
+    .kpi.opened::before  { background: var(--accent);  }
+    .kpi.clicked::before { background: #a78bfa;         }
+    .kpi.bounced::before { background: var(--warn);    }
+
+    .kpi .val { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .kpi .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .kpi .rate { font-size: 11px; color: var(--success); margin-top: 4px; }
+    .kpi.sent    .val { color: var(--success); }
+    .kpi.failed  .val { color: var(--danger);  }
+    .kpi.opened  .val { color: var(--accent);  }
+    .kpi.clicked .val { color: #a78bfa;         }
+    .kpi.bounced .val { color: var(--warn);    }
+
+    /* Charts row */
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .chart-card {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+    }
+    .chart-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+
+    /* Detail table */
+    .table-card {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .table-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: var(--bg); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; text-align: left; }
+    td { padding: 7px 10px; border-top: 1px solid var(--border); }
+    tr:hover td { background: rgba(91,106,240,.06); }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+    }
+    .b-sent     { background: rgba(34,197,94,.2);  color: var(--success); }
+    .b-fail     { background: rgba(239,68,68,.2);  color: var(--danger); }
+    .b-dup      { background: rgba(245,158,11,.2); color: var(--warn); }
+    .b-skip     { background: rgba(100,116,139,.2);color: var(--muted); }
+    .b-open     { background: rgba(91,106,240,.2); color: var(--accent); }
+
+    /* Refresh btn */
+    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 8px;
+      cursor: pointer; font-weight: 700; font-size: 12px; transition: all .2s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .85; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <h1>📊 SheetMerge Dashboard</h1>
+    <div class="subtitle">Real-time email campaign analytics & visual intelligence</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" style="background:var(--s2);color:var(--text);border:1px solid var(--border)" onclick="generateInSheetDashboard()">📊 Open In-Sheet Dashboard Tab</button>
+    <button class="btn btn-primary" onclick="loadAll()">🔄 Refresh</button>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi sent">
+    <div class="val" id="kSent">—</div>
+    <div class="lbl">Sent</div>
+    <div class="rate" id="kSentRate">—%</div>
+  </div>
+  <div class="kpi failed">
+    <div class="val" id="kFail">—</div>
+    <div class="lbl">Failed</div>
+    <div class="rate" id="kFailRate">—%</div>
+  </div>
+  <div class="kpi opened">
+    <div class="val" id="kOpen">—</div>
+    <div class="lbl">Opened</div>
+    <div class="rate" id="kOpenRate">—%</div>
+  </div>
+  <div class="kpi clicked">
+    <div class="val" id="kClick">—</div>
+    <div class="lbl">Clicked</div>
+    <div class="rate" id="kClickRate">—%</div>
+  </div>
+  <div class="kpi bounced">
+    <div class="val" id="kBounce">—</div>
+    <div class="lbl">Bounced</div>
+    <div class="rate" id="kBounceRate">—%</div>
+  </div>
+</div>
+
+<!-- More KPIs -->
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px">
+  <div class="kpi" style="border-color:rgba(34,197,94,0.4)"><div class="val" id="kPositive" style="color:var(--success)">—</div><div class="lbl">Positive Leads</div></div>
+  <div class="kpi"><div class="val" id="kReply">—</div><div class="lbl">Replied</div></div>
+  <div class="kpi"><div class="val" id="kBlocked">—</div><div class="lbl">Blocked</div></div>
+  <div class="kpi"><div class="val" id="kDup">—</div><div class="lbl">Duplicate</div></div>
+  <div class="kpi"><div class="val" id="kSkip">—</div><div class="lbl">Skipped</div></div>
+  <div class="kpi"><div class="val" id="kTotal">—</div><div class="lbl">Total Rows</div></div>
+</div>
+
+<!-- Charts -->
+<div class="charts">
+  <div class="chart-card">
+    <div class="chart-title">📬 Delivery Breakdown</div>
+    <canvas id="donutChart" height="200"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📈 Engagement Funnel</div>
+    <canvas id="funnelChart" height="200"></canvas>
+  </div>
+</div>
+
+<script>
+var donutChart, funnelChart;
+
+function loadAll() {
+  google.script.run
+    .withSuccessHandler(renderDashboard)
+    .withFailureHandler(function(e) { alert('Error: ' + e.message); })
+    .computeMetrics();
+}
+
+function pct(num, denom) {
+  if (!denom) return '0%';
+  return Math.round(num / denom * 100) + '%';
+}
+
+function renderDashboard(m) {
+  document.getElementById('kSent').textContent    = m.sent;
+  document.getElementById('kFail').textContent    = m.failed;
+  document.getElementById('kOpen').textContent    = m.opened;
+  document.getElementById('kClick').textContent   = m.clicked;
+  document.getElementById('kBounce').textContent  = m.bounced;
+  document.getElementById('kPositive').textContent= m.positive || m.replied || 0;
+  document.getElementById('kReply').textContent   = m.replied;
+  document.getElementById('kBlocked').textContent = m.blocked;
+  document.getElementById('kDup').textContent     = m.duplicate;
+  document.getElementById('kSkip').textContent    = m.skipped;
+  document.getElementById('kTotal').textContent   = m.total;
+
+  document.getElementById('kSentRate').textContent    = pct(m.sent,    m.total);
+  document.getElementById('kFailRate').textContent    = pct(m.failed,  m.total);
+  document.getElementById('kOpenRate').textContent    = pct(m.opened,  m.sent);
+  document.getElementById('kClickRate').textContent   = pct(m.clicked, m.sent);
+  document.getElementById('kBounceRate').textContent  = pct(m.bounced, m.sent);
+
+  drawDonut(m);
+  drawFunnel(m);
+}
+
+function generateInSheetDashboard() {
+  google.script.run
+    .withSuccessHandler(function() {
+      alert('📊 Visual Dashboard Tab generated inside your Google Sheet with native charts!');
+    })
+    .withFailureHandler(function(e) {
+      alert('Error generating dashboard sheet: ' + e.message);
+    })
+    .createOrUpdateDashboardSheet();
+}
+
+function drawDonut(m) {
+  var ctx = document.getElementById('donutChart').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Sent', 'Failed', 'Duplicate', 'Skipped'],
+      datasets: [{
+        data: [m.sent, m.failed, m.duplicate, m.skipped],
+        backgroundColor: ['#22c55e','#ef4444','#f59e0b','#64748b'],
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          labels: { color: '#e2e8f0', font: { size: 11 } }
+        }
+      },
+      cutout: '65%',
+      responsive: true
+    }
+  });
+}
+
+function drawFunnel(m) {
+  var ctx = document.getElementById('funnelChart').getContext('2d');
+  if (funnelChart) funnelChart.destroy();
+  funnelChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Sent', 'Opened', 'Clicked', 'Replied'],
+      datasets: [{
+        data: [m.sent, m.opened, m.clicked, m.replied],
+        backgroundColor: ['#5b6af0','#7c3aed','#a78bfa','#c4b5fd'],
+        borderRadius: 6,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#64748b' },
+          grid:  { color: 'rgba(46,51,84,.5)' }
+        },
+        y: {
+          ticks: { color: '#e2e8f0', font: { weight: '600' } },
+          grid:  { display: false }
+        }
+      },
+      responsive: true
+    }
+  });
+}
+
+loadAll();
+</script>
+</body>
+</html>
+
