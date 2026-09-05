@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SheetMerge Sidebar</title>
+  <style>
+    /* ── Design System ── */
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #22263a;
+      --border:      #2e3354;
+      --accent:      #5b6af0;
+      --accent-glow: rgba(91,106,240,0.25);
+      --success:     #22c55e;
+      --success-glow:rgba(34,197,94,0.2);
+      --warn:        #f59e0b;
+      --danger:      #ef4444;
+      --text:        #e2e8f0;
+      --muted:       #94a3b8;
+      --radius:      10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      padding: 0 0 90px;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e2240 0%, #12162b 100%);
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo { font-size: 24px; filter: drop-shadow(0 2px 8px var(--accent-glow)); }
+    .header h1 { font-size: 15px; font-weight: 700; letter-spacing: .5px; }
+    .header .ver { font-size: 11px; color: var(--muted); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .tab {
+      flex: 1;
+      padding: 11px 0;
+      text-align: center;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    /* Panels */
+    .panel { display: none; padding: 14px; }
+    .panel.active { display: block; }
+
+    /* Form controls */
+    .field { margin-bottom: 12px; }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 5px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    textarea { min-height: 100px; resize: vertical; font-family: 'Courier New', monospace; }
+    select option { background: var(--surface2); }
+
+    /* Row range */
+    .row-range { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .3px;
+      transition: all .2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-emerald {
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.4);
+      color: #86efac;
+    }
+    .btn-emerald:hover { background: rgba(34,197,94,0.25); border-color: var(--success); }
+    .btn-indigo {
+      background: rgba(91,106,240,0.15);
+      border: 1px solid rgba(91,106,240,0.4);
+      color: #c7d2fe;
+    }
+    .btn-indigo:hover { background: rgba(91,106,240,0.25); border-color: var(--accent); }
+
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Template source toggle */
+    .source-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 3px;
+      margin-bottom: 12px;
+      gap: 4px;
+    }
+    .source-opt {
+      flex: 1;
+      padding: 7px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .2s;
+    }
+    .source-opt.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    /* Mini-metrics strip */
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .m-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+    }
+    .m-card .val { font-size: 16px; font-weight: 800; color: var(--accent); }
+    .m-card .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+
+    /* Alert */
+    .alert {
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      margin-bottom: 12px;
+      display: none;
+      line-height: 1.4;
+    }
+    .alert.visible { display: block; }
+    .alert-success { background: rgba(34,197,94,.15);  border: 1px solid rgba(34,197,94,.3);  color: #86efac; }
+    .alert-error   { background: rgba(239,68,68,.15);  border: 1px solid rgba(239,68,68,.3);  color: #fca5a5; }
+    .alert-info    { background: rgba(91,106,240,.15); border: 1px solid rgba(91,106,240,.3); color: #a5b4fc; }
+    .alert-warn    { background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); color: #fcd34d; }
+
+    /* Badges & Chips */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 10px;
+      color: var(--text);
+    }
+    .chip-green { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.4); color: #86efac; }
+    .chip-orange { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #fcd34d; }
+
+    /* Progress bar */
+    .progress-wrap { background: var(--surface2); border-radius: 999px; height: 6px; overflow: hidden; margin: 8px 0; }
+    .progress-bar  { height: 100%; background: linear-gradient(90deg, var(--accent), #7c3aed); border-radius: 999px; transition: width .4s ease; width: 0%; }
+
+    /* Section divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
+
+    /* Sticky bottom action */
+    .sticky-bottom {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(15, 17, 23, 0.95);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+      padding: 12px 14px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Preview iframe */
+    #previewFrame {
+      width: 100%;
+      min-height: 220px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">✉️</div>
+  <div>
+    <h1>SheetMerge</h1>
+    <div class="ver">Professional Mail Merge & Intelligence</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('send')">Send</div>
+  <div class="tab" onclick="switchTab('template')">Template</div>
+  <div class="tab" onclick="switchTab('preview')">Preview</div>
+  <div class="tab" onclick="switchTab('actions')">Visuals & Leads</div>
+  <div class="tab" onclick="switchTab('metrics')">Metrics</div>
+</div>
+
+<!-- ══════════ 1. SEND PANEL ══════════ -->
+<div class="panel active" id="panel-send">
+
+  <div id="alertBox" class="alert"></div>
+
+  <!-- Mini metrics strip -->
+  <div class="metrics-strip">
+    <div class="m-card"><div class="val" id="m-sent">—</div><div class="lbl">Delivered</div></div>
+    <div class="m-card"><div class="val" id="m-open">—</div><div class="lbl">Opened</div></div>
+    <div class="m-card"><div class="val" id="m-click">—</div><div class="lbl">Clicks</div></div>
+    <div class="m-card"><div class="val" id="m-pos" style="color:var(--success)">—</div><div class="lbl">Positive</div></div>
+  </div>
+
+  <!-- Template Selection Shortcut -->
+  <div class="card">
+    <div class="card-title">
+      <span>Template Source</span>
+      <span class="chip chip-green" id="templateSourceIndicator">Gmail Draft Ready</span>
+    </div>
+    <div style="font-size:12px;color:var(--text);margin-bottom:8px" id="activeTemplateSummary">
+      Using Draft: <strong>Loading drafts…</strong>
+    </div>
+    <button class="btn btn-secondary" onclick="switchTab('template')">
+      ⚙️ Select or Edit Template
+    </button>
+  </div>
+
+  <!-- Contact & Row Selection -->
+  <div class="field">
+    <label>Email Column</label>
+    <select id="emailColumn" onchange="checkDuplicates()"></select>
+  </div>
+
+  <div class="field">
+    <label>Batch Range (Row Index)</label>
+    <div class="row-range">
+      <div>
+        <input type="number" id="startRow" min="2" value="2" placeholder="Start row">
+      </div>
+      <div>
+        <input type="number" id="endRow" min="0" value="0" placeholder="0 = all rows">
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:5px" id="lastSentInfo">
+      Row 0 = send all rows in queue.
+    </div>
+  </div>
+
+  <!-- Account Limit & Batch Notice -->
+  <div class="alert alert-info visible">
+    📬 <strong>Daily Safety Limit:</strong> 50 emails per run/account.<br>
+    To send more, switch accounts or export/import config.
+  </div>
+
+  <!-- Duplicate warning -->
+  <div id="dupWarning" class="alert alert-warn hidden">
+    ⚠️ Duplicate emails detected in your sheet. They will be skipped automatically to protect your reputation.
+    <div style="margin-top:6px;max-height:80px;overflow-y:auto;font-size:11px" id="dupList"></div>
+  </div>
+
+  <!-- Progress -->
+  <div id="progressSection" class="hidden">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">
+      Executing… <span id="progressText">0 / ?</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+
+</div>
+
+<!-- ══════════ 2. TEMPLATE PANEL ══════════ -->
+<div class="panel" id="panel-template">
+
+  <!-- Source Toggle -->
+  <label>Choose Template Source</label>
+  <div class="source-toggle">
+    <div class="source-opt active" id="opt-draft" onclick="setTemplateSource('draft')">
+      ✉️ Gmail Draft (Recommended)
+    </div>
+    <div class="source-opt" id="opt-custom" onclick="setTemplateSource('custom')">
+      ✍️ Custom Editor
+    </div>
+  </div>
+
+  <!-- Section A: Gmail Draft Picker -->
+  <div id="draftSection">
+    <div class="field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <label style="margin:0">Select Gmail Draft</label>
+        <button onclick="loadGmailDrafts()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;font-weight:700">
+          🔄 Refresh Drafts
+        </button>
+      </div>
+      <select id="draftSelect" onchange="onDraftSelected()">
+        <option value="">-- Loading Gmail Drafts... --</option>
+      </select>
+    </div>
+
+    <!-- Draft Details Card -->
+    <div class="card" id="draftInfoCard" style="display:none">
+      <div class="card-title">
+        <span>Draft Details</span>
+        <span class="chip" id="draftDate">—</span>
+      </div>
+      <div style="margin-bottom:6px">
+        <strong style="font-size:11px;color:var(--muted)">Subject:</strong>
+        <div id="draftSubjectText" style="font-weight:700;margin-top:2px;color:#fff"></div>
+      </div>
+      <div style="margin-bottom:6px" id="draftAttachmentsContainer"></div>
+      <div style="margin-top:8px">
+        <strong style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Detected Placeholders:</strong>
+        <div id="draftTagChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section B: Custom Template Fields -->
+  <div id="customSection" class="hidden">
+    <div class="field">
+      <label>Subject Line</label>
+      <input type="text" id="subjectTemplate" placeholder="Hello {{First Name}}, quick inquiry">
+    </div>
+
+    <div class="field">
+      <label>Email Body (HTML supported)</label>
+      <textarea id="bodyTemplate" placeholder="<p>Hi {{First Name}},</p>&#10;<p>I noticed your work at {{Company}}...</p>"></textarea>
+    </div>
+  </div>
+
+  <!-- Sender Details (Applicable to both) -->
+  <div class="field" style="margin-top:14px">
+    <label>Sender Display Name</label>
+    <input type="text" id="senderName" placeholder="e.g. Alex from SheetMerge">
+  </div>
+
+  <div class="field">
+    <label>Reply-To Email (optional)</label>
+    <input type="email" id="replyToEmail" placeholder="e.g. inquiries@example.com">
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Available Sheet Placeholders -->
+  <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
+    Sheet Columns (Click to insert placeholder):
+    <div id="placeholderHints" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="saveTemplate()">💾 Save Settings</button>
+    <button class="btn btn-secondary" onclick="switchTab('preview')">👁 Preview</button>
+  </div>
+
+</div>
+
+<!-- ══════════ 3. PREVIEW PANEL ══════════ -->
+<div class="panel" id="panel-preview">
+
+  <div class="field">
+    <label>Sample Row (Sheet Row Number)</label>
+    <input type="number" id="previewRow" value="2" min="2">
+  </div>
+  <button class="btn btn-secondary" onclick="generatePreview()" style="margin-bottom:12px">
+    🔄 Generate Live Sample Preview
+  </button>
+
+  <div style="margin-bottom:8px">
+    <strong style="font-size:11px;color:var(--muted);text-transform:uppercase">Rendered Subject:</strong>
+    <div id="previewSubject" style="font-size:13px;font-weight:700;color:#fff;margin-top:3px">—</div>
+  </div>
+
+  <label>Rendered Email HTML Body:</label>
+  <iframe id="previewFrame" srcdoc="<p style='color:#888;font-family:sans-serif;padding:20px'>Click 'Generate Live Sample Preview' above.</p>"></iframe>
+
+</div>
+
+<!-- ══════════ 4. VISUALS & LEADS PANEL ══════════ -->
+<div class="panel" id="panel-actions">
+
+  <!-- In-Sheet Visual Analytics -->
+  <div class="card">
+    <div class="card-title">
+      <span>📊 Visual Dashboard Tab</span>
+      <span class="chip chip-green">In-Sheet Visuals</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4">
+      Creates a dedicated <strong>"📊 SheetMerge Dashboard"</strong> sheet featuring 3 large native charts, KPI scorecards, live formulas, and strategic inferences to anchor your campaign decisions.
+    </p>
+    <button class="btn btn-indigo" onclick="createVisualDashboard()">
+      📊 Generate / Open In-Sheet Visual Dashboard
+    </button>
+  </div>
+
+  <!-- Positive Leads Sync -->
+  <div class="card">
+    <div class="card-title">
+      <span>🎯 Positive Responses</span>
+      <span class="chip chip-green">Warm Leads</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4">
+      Reflects all positive inbound replies and interested prospects into a dedicated <strong>"🎯 Positive Responses"</strong> sheet with all original contact data and timestamps.
+    </p>
+    <div class="btn-row">
+      <button class="btn btn-emerald" onclick="syncPositiveSheet()">
+        🎯 Sync Positive Leads
+      </button>
+      <button class="btn btn-secondary" onclick="markActiveRowPositive()">
+        ⭐ Mark Row Positive
+      </button>
+    </div>
+  </div>
+
+  <!-- Contact List Organization -->
+  <div class="card">
+    <div class="card-title">
+      <span>📋 List Organization</span>
+      <span class="chip">Queue Management</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4">
+      Move email addresses that can be contacted to the end/bottom of the sheet so you can clearly anchor where your pending queue begins.
+    </p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="moveContactableBottom()">
+        ⬇️ Move Contactable to Bottom
+      </button>
+      <button class="btn btn-secondary" onclick="moveContactedBottom()">
+        ⬇️ Move Contacted to Bottom
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ 5. METRICS PANEL ══════════ -->
+<div class="panel" id="panel-metrics">
+
+  <div id="metricsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="refreshMetrics()">🔄 Refresh Numbers</button>
+    <button class="btn btn-indigo" onclick="createVisualDashboard()">📊 Open Visual Dashboard</button>
+  </div>
+
+  <div class="divider"></div>
+  <div id="trackingInfo" style="font-size:11px;color:var(--muted)">
+    <strong>Tracking Web App Endpoint:</strong><br>
+    <span id="webAppUrl" style="word-break:break-all;color:var(--accent)">Loading…</span>
+  </div>
+
+</div>
+
+<!-- Sticky Bottom Send Section -->
+<div class="sticky-bottom">
+  <button class="btn btn-primary" id="sendBtn" onclick="startSend(false)">
+    📧 Start Mail Merge Now
+  </button>
+  <button class="btn btn-secondary" style="font-size:11px;padding:6px" onclick="startSend(true)">
+    📝 Create Personalized Drafts in Gmail (Review Mode)
+  </button>
+</div>
+
+<script>
+/* ── State ── */
+var cfg = {};
+var isSending = false;
+var templateMode = 'draft'; // 'draft' | 'custom'
+var draftsList = [];
+var selectedDraftId = '';
+
+/* ── Init ── */
+window.addEventListener('load', function() {
+  loadConfig();
+  loadColumns();
+  loadGmailDrafts();
+  refreshMetrics();
+  loadWebAppUrl();
+});
+
+/* ── Tab switching ── */
+function switchTab(name) {
+  var tabNames = ['send', 'template', 'preview', 'actions', 'metrics'];
+  document.querySelectorAll('.tab').forEach(function(t, i) {
+    t.classList.toggle('active', tabNames[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'panel-' + name);
+  });
+  if (name === 'template') loadPlaceholders();
+  if (name === 'metrics')  refreshMetrics();
+}
+
+/* ── Template Source Toggle ── */
+function setTemplateSource(mode) {
+  templateMode = mode;
+  document.getElementById('opt-draft').classList.toggle('active', mode === 'draft');
+  document.getElementById('opt-custom').classList.toggle('active', mode === 'custom');
+
+  document.getElementById('draftSection').classList.toggle('hidden', mode !== 'draft');
+  document.getElementById('customSection').classList.toggle('hidden', mode !== 'custom');
+
+  var indicator = document.getElementById('templateSourceIndicator');
+  if (mode === 'draft') {
+    indicator.textContent = 'Gmail Draft';
+    indicator.className = 'chip chip-green';
+  } else {
+    indicator.textContent = 'Custom HTML';
+    indicator.className = 'chip chip-orange';
+  }
+  updateActiveTemplateSummary();
+}
+
+/* ── Load Gmail Drafts ── */
+function loadGmailDrafts() {
+  var sel = document.getElementById('draftSelect');
+  sel.innerHTML = '<option value="">Loading drafts from Gmail…</option>';
+
+  google.script.run
+    .withSuccessHandler(function(drafts) {
+      draftsList = drafts || [];
+      sel.innerHTML = '';
+
+      if (draftsList.length === 0) {
+        sel.innerHTML = '<option value="">(No drafts found in Gmail — create one in Gmail!)</option>';
+        document.getElementById('draftInfoCard').style.display = 'none';
+        updateActiveTemplateSummary();
+        return;
+      }
+
+      draftsList.forEach(function(d, index) {
+        var opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = (d.hasAttachments ? '📎 ' : '') + d.subject;
+        if (index === 0 && !selectedDraftId) {
+          opt.selected = true;
+          selectedDraftId = d.id;
+        } else if (d.id === selectedDraftId) {
+          opt.selected = true;
+        }
+        sel.appendChild(opt);
+      });
+
+      onDraftSelected();
+    })
+    .withFailureHandler(function(e) {
+      sel.innerHTML = '<option value="">Error loading drafts: ' + e.message + '</option>';
+    })
+    ._sidebarGetGmailDrafts();
+}
+
+/* ── Handle Draft Selection ── */
+function onDraftSelected() {
+  var sel = document.getElementById('draftSelect');
+  selectedDraftId = sel.value;
+
+  var draft = draftsList.find(function(d) { return d.id === selectedDraftId; });
+  var card = document.getElementById('draftInfoCard');
+
+  if (!draft) {
+    card.style.display = 'none';
+    updateActiveTemplateSummary();
+    return;
+  }
+
+  card.style.display = 'block';
+  document.getElementById('draftSubjectText').textContent = draft.subject;
+  document.getElementById('draftDate').textContent = draft.date || 'Recent';
+
+  // Attachments
+  var attContainer = document.getElementById('draftAttachmentsContainer');
+  if (draft.hasAttachments) {
+    attContainer.innerHTML = '<strong style="font-size:10px;color:var(--muted);text-transform:uppercase">Attachments:</strong> ' +
+      draft.attachmentNames.map(function(n) { return '<span class="chip" style="margin-left:4px">📎 ' + n + '</span>'; }).join('');
+  } else {
+    attContainer.innerHTML = '';
+  }
+
+  // Tags validation
+  var tagChipsContainer = document.getElementById('draftTagChips');
+  tagChipsContainer.innerHTML = '';
+
+  if (draft.tags && draft.tags.length > 0) {
+    draft.tags.forEach(function(t) {
+      var chip = document.createElement('span');
+      chip.className = 'chip chip-green';
+      chip.textContent = '{{' + t + '}}';
+      tagChipsContainer.appendChild(chip);
+    });
+  } else {
+    tagChipsContainer.innerHTML = '<span style="font-size:11px;color:var(--muted)">No {{placeholders}} found in draft.</span>';
+  }
+
+  updateActiveTemplateSummary();
+}
+
+function updateActiveTemplateSummary() {
+  var el = document.getElementById('activeTemplateSummary');
+  if (templateMode === 'draft') {
+    var draft = draftsList.find(function(d) { return d.id === selectedDraftId; });
+    el.innerHTML = 'Using Draft: <strong>' + (draft ? draft.subject : 'None selected') + '</strong>';
+  } else {
+    var subj = document.getElementById('subjectTemplate').value;
+    el.innerHTML = 'Using Custom Template: <strong>' + (subj || 'Untitled') + '</strong>';
+  }
+}
+
+/* ── Load columns ── */
+function loadColumns() {
+  google.script.run
+    .withSuccessHandler(function(cols) {
+      var sel = document.getElementById('emailColumn');
+      sel.innerHTML = '';
+      cols.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = opt.textContent = c;
+        if (c.toLowerCase() === 'email' || c.toLowerCase() === 'email address') opt.selected = true;
+        sel.appendChild(opt);
+      });
+      checkDuplicates();
+    })
+    .getDataColumns();
+}
+
+/* ── Load config ── */
+function loadConfig() {
+  google.script.run
+    .withSuccessHandler(function(c) {
+      cfg = c;
+      document.getElementById('startRow').value = c.startRow || 2;
+      document.getElementById('senderName').value = c.senderName || '';
+      document.getElementById('replyToEmail').value = c.replyToEmail || '';
+      document.getElementById('subjectTemplate').value = c.subjectTemplate || '';
+      document.getElementById('bodyTemplate').value = c.bodyTemplate || '';
+
+      google.script.run
+        .withSuccessHandler(function(info) {
+          if (info.lastSentRow > 1) {
+            document.getElementById('lastSentInfo').innerHTML =
+              'Last sent reached row <strong>' + info.lastSentRow + '</strong>. Suggested start: <strong>' + info.nextRow + '</strong>.';
+            document.getElementById('startRow').value = info.nextRow;
+          }
+        })
+        .getProgressInfo();
+    })
+    .getConfig();
+}
+
+/* ── Load placeholders ── */
+function loadPlaceholders() {
+  google.script.run
+    .withSuccessHandler(function(cols) {
+      var container = document.getElementById('placeholderHints');
+      container.innerHTML = '';
+      cols.forEach(function(c) {
+        var chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.style.cursor = 'pointer';
+        chip.style.color = 'var(--accent)';
+        chip.textContent = '{{' + c + '}}';
+        chip.onclick = function() {
+          var ta = document.getElementById('bodyTemplate');
+          var pos = ta.selectionStart || 0;
+          var val = ta.value;
+          ta.value = val.slice(0, pos) + '{{' + c + '}}' + val.slice(pos);
+          ta.focus();
+        };
+        container.appendChild(chip);
+      });
+    })
+    .getDataColumns();
+}
+
+/* ── Check duplicates ── */
+function checkDuplicates() {
+  var emailCol = document.getElementById('emailColumn').value;
+  if (!emailCol) return;
+
+  google.script.run
+    .withSuccessHandler(function(dupes) {
+      var warn = document.getElementById('dupWarning');
+      var list = document.getElementById('dupList');
+      var keys = Object.keys(dupes || {});
+      if (keys.length === 0) {
+        warn.classList.add('hidden');
+        return;
+      }
+      warn.classList.remove('hidden');
+      list.innerHTML = keys.map(function(e) {
+        return '<div style="color:var(--warn);padding:2px 0">⚠ ' + e + ' (rows: ' + dupes[e].join(', ') + ')</div>';
+      }).join('');
+    })
+    ._sidebarFindDuplicates(emailCol);
+}
+
+/* ── List Organization & Actions ── */
+function moveContactableBottom() {
+  showAlert('Reordering list: moving contactable addresses to bottom…', 'info');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      showAlert('✅ ' + res.contactableCount + ' contactable leads moved to bottom (Row ' + res.startRowOfContactable + '+).', 'success');
+      loadConfig();
+    })
+    .withFailureHandler(function(e) {
+      showAlert('Reorder error: ' + e.message, 'error');
+    })
+    ._sidebarMoveContactableToBottom();
+}
+
+function moveContactedBottom() {
+  showAlert('Moving contacted leads to bottom…', 'info');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      showAlert('✅ ' + res.contactedCount + ' contacted leads moved to bottom.', 'success');
+      loadConfig();
+    })
+    .withFailureHandler(function(e) {
+      showAlert('Reorder error: ' + e.message, 'error');
+    })
+    ._sidebarMoveContactedToBottom();
+}
+
+function syncPositiveSheet() {
+  showAlert('Syncing positive leads to dedicated sheet…', 'info');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      showAlert('🎯 Done! ' + res.count + ' positive leads synced to "' + res.sheetName + '".', 'success');
+      refreshMetrics();
+    })
+    .withFailureHandler(function(e) {
+      showAlert('Sync error: ' + e.message, 'error');
+    })
+    ._sidebarSyncPositiveResponses();
+}
+
+function markActiveRowPositive() {
+  google.script.run
+    .withSuccessHandler(function() {
+      showAlert('⭐ Selected row marked as positive response!', 'success');
+      refreshMetrics();
+    })
+    .withFailureHandler(function(e) {
+      showAlert('Error: ' + e.message, 'error');
+    })
+    .markSelectedRowPositive();
+}
+
+function createVisualDashboard() {
+  showAlert('Generating in-sheet visual dashboard with native charts…', 'info');
+  google.script.run
+    .withSuccessHandler(function() {
+      showAlert('📊 Visual Dashboard sheet generated and ready!', 'success');
+    })
+    .withFailureHandler(function(e) {
+      showAlert('Dashboard error: ' + e.message, 'error');
+    })
+    ._sidebarCreateDashboardSheet();
+}
+
+/* ── Save Template ── */
+function saveTemplate() {
+  var partial = {
+    senderName     : document.getElementById('senderName').value,
+    replyToEmail   : document.getElementById('replyToEmail').value,
+    subjectTemplate: document.getElementById('subjectTemplate').value,
+    bodyTemplate   : document.getElementById('bodyTemplate').value
+  };
+  google.script.run
+    .withSuccessHandler(function() { showAlert('Settings saved ✅', 'success'); })
+    .withFailureHandler(function(e) { showAlert(e.message, 'error'); })
+    .saveConfig(partial);
+}
+
+/* ── Preview ── */
+function generatePreview() {
+  var row = parseInt(document.getElementById('previewRow').value) || 2;
+  var draftId = (templateMode === 'draft') ? selectedDraftId : null;
+  var subj = document.getElementById('subjectTemplate').value;
+  var body = document.getElementById('bodyTemplate').value;
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('previewSubject').textContent = result.subject || '(No Subject)';
+      document.getElementById('previewFrame').srcdoc = result.body || '<p style="color:#888;padding:20px">(Empty Body)</p>';
+    })
+    .withFailureHandler(function(e) { showAlert(e.message, 'error'); })
+    ._sidebarPreviewEmail(row, subj, body, draftId);
+}
+
+/* ── Send / Create Drafts ── */
+function startSend(isDraftsOnly) {
+  if (isSending) return;
+
+  var emailCol = document.getElementById('emailColumn').value;
+  var startRow = parseInt(document.getElementById('startRow').value) || 2;
+  var endRow   = parseInt(document.getElementById('endRow').value)   || 0;
+
+  if (!emailCol) { showAlert('Please select the Email column.', 'warn'); return; }
+
+  var draftId = (templateMode === 'draft') ? selectedDraftId : null;
+  var subj = document.getElementById('subjectTemplate').value;
+  var body = document.getElementById('bodyTemplate').value;
+
+  if (templateMode === 'draft' && !draftId) {
+    showAlert('Please select a Gmail draft template first.', 'warn');
+    return;
+  }
+  if (templateMode === 'custom' && (!subj || !body)) {
+    showAlert('Please fill in Subject and Body template.', 'warn');
+    return;
+  }
+
+  isSending = true;
+  setProgress(true, isDraftsOnly ? 'Creating drafts in Gmail…' : 'Sending emails…', 10);
+  document.getElementById('sendBtn').innerHTML = '<span class="spinner"></span> Working…';
+  document.getElementById('sendBtn').disabled = true;
+
+  var params = {
+    startRow           : startRow,
+    endRow             : endRow,
+    emailColumn        : emailCol,
+    draftId            : draftId,
+    subjectTemplate    : subj,
+    bodyTemplate       : body,
+    senderName         : document.getElementById('senderName').value,
+    replyToEmail       : document.getElementById('replyToEmail').value,
+    createDraftsOnly   : isDraftsOnly === true,
+    trackingBackendUrl : cfg.trackingBackendUrl || '',
+    enableOpenTracking : cfg.enableOpenTracking !== false,
+    enableClickTracking: cfg.enableClickTracking !== false,
+    sendDelay          : cfg.sendDelay || 2,
+    dailyLimit         : cfg.dailyLimit || 50
+  };
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      isSending = false;
+      setProgress(false);
+      document.getElementById('sendBtn').innerHTML = '📧 Start Mail Merge Now';
+      document.getElementById('sendBtn').disabled = false;
+
+      var actionWord = isDraftsOnly ? 'Drafts created' : 'Sent';
+      var msg = '✅ Complete! ' + actionWord + ': ' + result.sent +
+                ' | Failed: ' + result.failed +
+                ' | Duplicates: ' + result.duplicate +
+                ' | Skipped: ' + result.skipped;
+      showAlert(msg, 'success');
+      refreshMetrics();
+      loadConfig();
+    })
+    .withFailureHandler(function(e) {
+      isSending = false;
+      setProgress(false);
+      document.getElementById('sendBtn').innerHTML = '📧 Start Mail Merge Now';
+      document.getElementById('sendBtn').disabled = false;
+      showAlert('Error: ' + e.message, 'error');
+    })
+    .runMailMerge(params);
+}
+
+/* ── Web App URL ── */
+function loadWebAppUrl() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      document.getElementById('webAppUrl').textContent = url || 'Deploy as Web App first (see README)';
+    })
+    .withFailureHandler(function() {
+      document.getElementById('webAppUrl').textContent = 'Not deployed yet';
+    })
+    .getWebAppUrl();
+}
+
+/* ── Metrics ── */
+function refreshMetrics() {
+  google.script.run
+    .withSuccessHandler(function(m) {
+      document.getElementById('m-sent').textContent = m.sent || 0;
+      document.getElementById('m-open').textContent = m.opened || 0;
+      document.getElementById('m-click').textContent = m.clicked || 0;
+      document.getElementById('m-pos').textContent = m.positive || m.replied || 0;
+
+      var grid = document.getElementById('metricsGrid');
+      var rows = [
+        ['Total Contacts', m.total || 0],
+        ['Delivered', m.sent || 0],
+        ['Opened', m.opened || 0],
+        ['Clicked', m.clicked || 0],
+        ['Positive Leads', m.positive || m.replied || 0],
+        ['Bounced', m.bounced || 0],
+        ['Failed', m.failed || 0],
+        ['Duplicates', m.duplicate || 0]
+      ];
+      grid.innerHTML = rows.map(function(r) {
+        return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center">' +
+          '<span style="font-size:11px;color:var(--muted)">' + r[0] + '</span>' +
+          '<strong style="font-size:14px;color:var(--text)">' + r[1] + '</strong></div>';
+      }).join('');
+    })
+    .computeMetrics();
+}
+
+/* ── UI Helpers ── */
+function showAlert(msg, type) {
+  var box = document.getElementById('alertBox');
+  box.className = 'alert alert-' + type + ' visible';
+  box.textContent = msg;
+  if (type === 'success' || type === 'info') {
+    setTimeout(function() { box.classList.remove('visible'); }, 7000);
+  }
+}
+
+function setProgress(show, text, pct) {
+  var sec = document.getElementById('progressSection');
+  sec.classList.toggle('hidden', !show);
+  if (show) {
+    document.getElementById('progressText').textContent = text || '';
+    document.getElementById('progressBar').style.width = (pct || 0) + '%';
+  }
+}
+</script>
+</body>
+</html>
