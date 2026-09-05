@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SheetMerge Settings</title>
+  <style>
+    :root {
+      --bg:     #0f1117; --surface: #1a1d27; --s2: #22263a;
+      --border: #2e3354; --accent:  #5b6af0; --text: #e2e8f0;
+      --muted:  #64748b; --success: #22c55e; --danger: #ef4444;
+      --r: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; font-size: 13px; }
+    h2 { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .sub { color: var(--muted); font-size: 11px; margin-bottom: 20px; }
+    .section { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 14px; }
+    .sec-title { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+    .field { margin-bottom: 12px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 10px; font-size: 12px; outline: none; transition: border-color .2s; }
+    input:focus, select:focus { border-color: var(--accent); }
+    .hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .toggle { position: relative; width: 36px; height: 20px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; transition: .2s; }
+    .slider:before { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .2s; }
+    input:checked + .slider { background: var(--accent); border-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(16px); background: #fff; }
+    .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; transition: all .2s; margin-right: 8px; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--s2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .alert { padding: 10px 12px; border-radius: var(--r); font-size: 12px; margin-bottom: 12px; display: none; }
+    .alert.show { display: block; }
+    .alert-success { background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.3); color: #86efac; }
+    .alert-error   { background: rgba(239,68,68,.15);  border: 1px solid rgba(239,68,68,.3);  color: #fca5a5; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>⚙️ SheetMerge Settings</h2>
+<div class="sub">Configure defaults. All settings are saved per script.</div>
+
+<div id="alert" class="alert"></div>
+
+<!-- Sending -->
+<div class="section">
+  <div class="sec-title">📬 Sending</div>
+  <div class="two-col">
+    <div class="field">
+      <label>Daily Limit</label>
+      <input type="number" id="dailyLimit" min="1" max="500" value="50">
+      <div class="hint">Gmail free: 500/day. Stay ≤50 to be safe.</div>
+    </div>
+    <div class="field">
+      <label>Send Delay (seconds)</label>
+      <input type="number" id="sendDelay" min="0" max="60" value="2">
+      <div class="hint">Pause between each email.</div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Email Column Name</label>
+    <input type="text" id="emailColumn" value="Email">
+    <div class="hint">Header name in your sheet that contains recipient emails.</div>
+  </div>
+  <div class="field">
+    <label>Default Sender Name</label>
+    <input type="text" id="senderName" placeholder="Acme Corp">
+  </div>
+  <div class="field">
+    <label>Default Reply-To Email</label>
+    <input type="email" id="replyToEmail" placeholder="support@example.com">
+  </div>
+</div>
+
+<!-- Tracking -->
+<div class="section">
+  <div class="sec-title">👁 Tracking</div>
+  <div class="field">
+    <label>Tracking Backend URL</label>
+    <input type="url" id="trackingBackendUrl" placeholder="http://localhost:8000">
+    <div class="hint">FastAPI server URL. Leave blank to use sheet-only tracking via Web App.</div>
+  </div>
+  <div class="toggle-row">
+    <span>Enable Open Tracking (pixel)</span>
+    <label class="toggle"><input type="checkbox" id="enableOpenTracking" checked><span class="slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <span>Enable Click Tracking (redirect)</span>
+    <label class="toggle"><input type="checkbox" id="enableClickTracking" checked><span class="slider"></span></label>
+  </div>
+</div>
+
+<!-- Actions -->
+<div style="margin-top:6px">
+  <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+  <button class="btn btn-secondary" onclick="resetSettings()">↩️ Reset Defaults</button>
+  <button class="btn btn-danger" onclick="confirmClear()">🗑 Clear Status Cols</button>
+</div>
+
+<script>
+function loadSettings() {
+  google.script.run
+    .withSuccessHandler(function(c) {
+      document.getElementById('dailyLimit').value          = c.dailyLimit          || 50;
+      document.getElementById('sendDelay').value           = c.sendDelay           || 2;
+      document.getElementById('emailColumn').value         = c.emailColumn         || 'Email';
+      document.getElementById('senderName').value          = c.senderName          || '';
+      document.getElementById('replyToEmail').value        = c.replyToEmail        || '';
+      document.getElementById('trackingBackendUrl').value  = c.trackingBackendUrl  || '';
+      document.getElementById('enableOpenTracking').checked  = c.enableOpenTracking  !== false;
+      document.getElementById('enableClickTracking').checked = c.enableClickTracking !== false;
+    })
+    .getConfig();
+}
+
+function saveSettings() {
+  var partial = {
+    dailyLimit         : parseInt(document.getElementById('dailyLimit').value)    || 50,
+    sendDelay          : parseInt(document.getElementById('sendDelay').value)     || 2,
+    emailColumn        : document.getElementById('emailColumn').value.trim(),
+    senderName         : document.getElementById('senderName').value.trim(),
+    replyToEmail       : document.getElementById('replyToEmail').value.trim(),
+    trackingBackendUrl : document.getElementById('trackingBackendUrl').value.trim(),
+    enableOpenTracking : document.getElementById('enableOpenTracking').checked,
+    enableClickTracking: document.getElementById('enableClickTracking').checked
+  };
+  google.script.run
+    .withSuccessHandler(function() { showAlert('Settings saved ✅', 'success'); })
+    .withFailureHandler(function(e) { showAlert(e.message, 'error'); })
+    .saveConfig(partial);
+}
+
+function resetSettings() {
+  if (confirm('Reset all settings to defaults?')) {
+    google.script.run
+      .withSuccessHandler(function() { loadSettings(); showAlert('Reset to defaults ✅', 'success'); })
+      .resetAllConfig();
+  }
+}
+
+function confirmClear() {
+  if (confirm('This will DELETE all MM_ status columns from your data sheet. Continue?')) {
+    google.script.run
+      .withSuccessHandler(function() { google.script.host.close(); })
+      .withFailureHandler(function(e) { showAlert(e.message, 'error'); })
+      .clearStatusColumns();
+  }
+}
+
+function showAlert(msg, type) {
+  var a = document.getElementById('alert');
+  a.className = 'alert alert-' + type + ' show';
+  a.textContent = msg;
+  setTimeout(function() { a.classList.remove('show'); }, 5000);
+}
+
+loadSettings();
+</script>
+</body>
+</html>
+
