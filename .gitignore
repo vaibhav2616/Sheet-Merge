@@ -1,5 +1,6 @@
 # ── Apps Script (clasp) ───────────────────────────────────────
-.clasp.json          # contains your personal scriptId — keep private
+# contains your personal scriptId — keep private
+.clasp.json
 .claspignore
 
 # ── Python backend ────────────────────────────────────────────
