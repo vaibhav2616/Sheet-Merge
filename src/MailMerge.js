@@ -218,17 +218,26 @@ function _doMailMerge(params) {
 
     } catch (err) {
       var errMsg = err.message || String(err);
-      var isBlock = errMsg.toLowerCase().indexOf('block') !== -1 || errMsg.toLowerCase().indexOf('spam') !== -1;
-      var failStatus = isBlock ? STATUS.BLOCKED : STATUS.FAILED;
+      var errLower = errMsg.toLowerCase();
+      var is5xxHardBounce = errLower.indexOf('550') !== -1 || errLower.indexOf('554') !== -1 || errLower.indexOf('5.4.1') !== -1 || errLower.indexOf('user unknown') !== -1 || errLower.indexOf('address rejected') !== -1;
+      var isBlock = errLower.indexOf('block') !== -1 || errLower.indexOf('spam') !== -1 || errLower.indexOf('policy') !== -1;
+
+      var failStatus = is5xxHardBounce ? STATUS.BOUNCED : (isBlock ? STATUS.BLOCKED : STATUS.FAILED);
 
       setCellStatus(sheet, row.rowIndex, failStatus, {
         error: errMsg,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        details: is5xxHardBounce ? 'Permanent 5xx hard bounce intercepted' : 'Dispatch error'
       });
+
+      // If hard bounce, add to sentSet so it is never re-tried in this or future runs
+      if (is5xxHardBounce && email) {
+        sentSet[emailLower] = true;
+      }
 
       result.failed++;
       result.errors.push('Row ' + row.rowIndex + ' (' + email + '): ' + errMsg);
-      // Delivery failed; engine continues to next contact until 50 successful
+      // Hard bounce or error encountered: engine stops hammering this address and continues to next lead
     }
   }
 

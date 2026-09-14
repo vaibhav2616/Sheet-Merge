@@ -1,8 +1,14 @@
 """
-SheetMerge FastAPI Multi-Account Manager & Automation Engine (v2)
-==================================================================
-Manages multi-account OAuth rotation, automated daily dispatch,
-real-time bounce and reply classification, and open/click tracking.
+SheetMerge FastAPI Multi-Account Manager & Automation Engine (v2 Enterprise)
+============================================================================
+Features:
+- Multi-Account OAuth & Relay Rotation
+- Socket Timeout Configuration (timeout=30s)
+- 5xx Hard Bounce Interception & Permanent Suppression
+- Randomized Throttling Jitter (2-5s human interval)
+- DNS Security Checker (SPF, DKIM, DMARC, MX)
+- Content Spam Trigger & Link Ratio Analyzer
+- Pre-flight Recipient List Sanitizer
 """
 
 from __future__ import annotations
@@ -15,13 +21,17 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import unquote
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, EmailStr
+
+from domain_security import check_domain_dns
+from spam_analyzer import analyze_email_content, verify_email_address
+from smtp_relay import SMTPRelayConfig, get_random_throttle_delay, send_via_smtp_relay
 
 
 # ── Database Path & Transparent Pixel ─────────────────────────────────────
@@ -73,6 +83,12 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_history_email ON send_history(email);
             CREATE INDEX IF NOT EXISTS idx_history_track ON send_history(track_id);
 
+            CREATE TABLE IF NOT EXISTS suppression_list (
+                email          TEXT PRIMARY KEY,
+                reason         TEXT NOT NULL, -- 'hard_bounce_5xx', 'spam_complaint', 'manual'
+                suppressed_at  TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS events (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
                 track_id       TEXT NOT NULL,
@@ -113,13 +129,34 @@ class MergeRecordRequest(BaseModel):
     subject: Optional[str] = None
 
 
-class BatchSendSimulationRequest(BaseModel):
-    recipients: List[str]
+class DomainCheckRequest(BaseModel):
+    domain: str
+    dkim_selector: Optional[str] = "google"
+
+
+class SpamCheckRequest(BaseModel):
     subject: str
     body_html: str
-    daily_target: int = 50
-    base_delay_seconds: float = 12.0
-    use_jitter: bool = True
+
+
+class ListCleanRequest(BaseModel):
+    emails: List[str]
+    check_mx: Optional[bool] = False
+
+
+class SmtpSendRequest(BaseModel):
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str
+    smtp_password: str
+    sender_email: EmailStr
+    recipients: List[EmailStr]
+    subject: str
+    body_html: str
+    body_text: Optional[str] = None
+    min_delay_seconds: float = 2.0
+    max_delay_seconds: float = 5.0
+    socket_timeout: float = 30.0
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────
@@ -133,9 +170,9 @@ async def lifespan(app: FastAPI):
 # ── FastAPI App ───────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="SheetMerge V2 Backend & Multi-Account Engine",
-    description="Anti-Spam Humanizer, Multi-Account Rotation, and Tracking Engine",
-    version="2.0.0",
+    title="SheetMerge Enterprise V2 Backend",
+    description="Anti-Spam Humanizer, SPF/DKIM/DMARC Inspector, 5xx Bounce Guard, and Multi-Account Engine",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
@@ -147,11 +184,126 @@ app.add_middleware(
 )
 
 
+# ── Domain Security & DNS Authentication Endpoints ───────────────────────
+
+@app.post("/api/security/check-domain")
+def inspect_domain_security(req: DomainCheckRequest):
+    """
+    Checks SPF, DKIM, DMARC, and MX records for a domain to guarantee compliance
+    with Microsoft 365, Google Workspace, and enterprise firewall standards.
+    """
+    return check_domain_dns(req.domain, req.dkim_selector or "google")
+
+
+# ── Content Spam Analyzer ────────────────────────────────────────────────
+
+@app.post("/api/security/analyze-content")
+def analyze_content(req: SpamCheckRequest):
+    """
+    Analyzes subject and body against enterprise spam trigger patterns,
+    caps ratios, link stuffing, and image-to-text ratios.
+    """
+    return analyze_email_content(req.subject, req.body_html)
+
+
+# ── Recipient List Cleaning ──────────────────────────────────────────────
+
+@app.post("/api/security/clean-list")
+def clean_recipient_list(req: ListCleanRequest):
+    """
+    Sanitizes recipient emails before dispatch, rejecting syntax errors,
+    disposable inboxes, and suppressed hard bounce addresses.
+    """
+    conn = get_db()
+    suppressed_rows = conn.execute("SELECT email FROM suppression_list").fetchall()
+    suppressed_set = {r["email"].lower() for r in suppressed_rows}
+    conn.close()
+
+    valid_leads: List[str] = []
+    invalid_leads: List[Dict[str, str]] = []
+
+    for email in req.emails:
+        clean_email = email.strip().lower()
+        if clean_email in suppressed_set:
+            invalid_leads.append({"email": email, "reason": "Previously hard-bounced (Suppressed)"})
+            continue
+
+        ver_result = verify_email_address(clean_email, check_mx=req.check_mx or False)
+        if ver_result["valid"]:
+            valid_leads.append(clean_email)
+        else:
+            invalid_leads.append({"email": email, "reason": ver_result["reason"]})
+
+    return {
+        "total_analyzed": len(req.emails),
+        "valid_count": len(valid_leads),
+        "invalid_count": len(invalid_leads),
+        "valid_emails": valid_leads,
+        "invalid_details": invalid_leads
+    }
+
+
+# ── Enterprise SMTP Dispatch with 5xx Bounce Guard & Throttling ──────────
+
+@app.post("/api/dispatch/smtp-batch")
+def dispatch_via_smtp_relay(req: SmtpSendRequest):
+    """
+    Dispatches a batch of emails through an authenticated SMTP relay:
+    - Sets explicit 30s socket timeout
+    - Applies randomized 2-5s human throttling jitter
+    - Intercepts 5xx hard bounces and permanently suppresses recipient
+    """
+    config = SMTPRelayConfig(
+        host=req.smtp_host,
+        port=req.smtp_port,
+        username=req.smtp_user,
+        password=req.smtp_password,
+        timeout=req.socket_timeout
+    )
+
+    conn = get_db()
+    results = []
+
+    for email in req.recipients:
+        # Check suppression
+        supp = conn.execute("SELECT email FROM suppression_list WHERE email = ?", (email.lower(),)).fetchone()
+        if supp:
+            results.append({"recipient": email, "status": "skipped", "reason": "Address permanently suppressed (prior 5xx bounce)"})
+            continue
+
+        # Send via relay
+        res = send_via_smtp_relay(
+            config=config,
+            sender=req.sender_email,
+            recipient=email,
+            subject=req.subject,
+            body_html=req.body_html,
+            body_text=req.body_text
+        )
+
+        if not res["success"] and res.get("permanent_suppress"):
+            # Hard bounce encountered (550 / 5xx) -> Permanently suppress!
+            now_str = datetime.now(timezone.utc).isoformat()
+            with conn:
+                conn.execute(
+                    "INSERT OR IGNORE INTO suppression_list (email, reason, suppressed_at) VALUES (?, ?, ?)",
+                    (email.lower(), res.get("error", "5xx Hard Bounce"), now_str)
+                )
+
+        results.append(res)
+
+        # Humanized randomized throttle (2 - 5 seconds jitter)
+        delay = get_random_throttle_delay(req.min_delay_seconds, req.max_delay_seconds)
+        time.sleep(delay)
+
+    conn.close()
+    return {"dispatched_count": len(results), "details": results}
+
+
 # ── Multi-Account Rotation Endpoints ─────────────────────────────────────
 
 @app.get("/api/accounts", response_model=List[AccountResponse])
 def list_accounts():
-    """Returns all configured sender accounts with current quota metrics."""
     conn = get_db()
     rows = conn.execute("SELECT id, email, daily_quota, sent_today, is_active FROM accounts").fetchall()
     conn.close()
@@ -169,7 +321,6 @@ def list_accounts():
 
 @app.post("/api/accounts", response_model=AccountResponse)
 def add_account(account: AccountCreate):
-    """Registers a sender account for multi-account alternation."""
     conn = get_db()
     now_str = datetime.now(timezone.utc).isoformat()
     try:
@@ -197,12 +348,7 @@ def add_account(account: AccountCreate):
 
 @app.get("/api/accounts/next-active")
 def get_next_available_account():
-    """
-    Selects the next active sender account that hasn't hit its 50/day limit,
-    enabling round-robin alternation across 2 or more accounts.
-    """
     conn = get_db()
-    # Find account with sent_today < daily_quota
     row = conn.execute(
         """
         SELECT id, email, daily_quota, sent_today
@@ -215,10 +361,7 @@ def get_next_available_account():
     conn.close()
 
     if not row:
-        return {
-            "available": False,
-            "message": "All accounts have satisfied their daily limits.",
-        }
+        return {"available": False, "message": "All accounts have satisfied their daily limits."}
 
     return {
         "available": True,
@@ -232,7 +375,6 @@ def get_next_available_account():
 
 @app.post("/api/history/record")
 def record_send_event(req: MergeRecordRequest):
-    """Stores send status in the persistent backend database."""
     conn = get_db()
     now_str = datetime.now(timezone.utc).isoformat()
     with conn:
@@ -255,7 +397,6 @@ def record_send_event(req: MergeRecordRequest):
 
 @app.get("/api/history/check/{email}")
 def check_email_history(email: str):
-    """Verifies whether an email was already contacted in previous campaigns."""
     conn = get_db()
     row = conn.execute(
         "SELECT status, timestamp, subject FROM send_history WHERE email = ?",
@@ -276,7 +417,6 @@ def check_email_history(email: str):
 
 @app.get("/track/open/{track_id}")
 def track_open(track_id: str, request: Request):
-    """Returns 1x1 transparent GIF and logs open event."""
     ip = request.client.host if request.client else ""
     ua = request.headers.get("user-agent", "")
     now_str = datetime.now(timezone.utc).isoformat()
@@ -287,19 +427,16 @@ def track_open(track_id: str, request: Request):
             "INSERT INTO events (track_id, event_type, ip, user_agent, created_at) VALUES (?, 'open', ?, ?, ?)",
             (track_id, ip, ua, now_str),
         )
-        # Upgrade status in history if currently sent
         conn.execute(
             "UPDATE send_history SET status = 'opened' WHERE track_id = ? AND status = 'sent'",
             (track_id,),
         )
     conn.close()
-
     return Response(content=TRANSPARENT_GIF, media_type="image/gif")
 
 
 @app.get("/track/click/{track_id}")
 def track_click(track_id: str, url: str = Query(...), request: Request = None):
-    """Logs link click and redirects recipient to target destination."""
     ip = request.client.host if request.client else ""
     ua = request.headers.get("user-agent", "")
     now_str = datetime.now(timezone.utc).isoformat()
@@ -316,15 +453,11 @@ def track_click(track_id: str, url: str = Query(...), request: Request = None):
             (track_id,),
         )
     conn.close()
-
     return RedirectResponse(url=target_url, status_code=302)
 
 
-# ── Status Inspection API ────────────────────────────────────────────────
-
 @app.get("/api/status/{track_id}")
 def get_status(track_id: str):
-    """Retrieves full interaction metrics for a given send."""
     conn = get_db()
     events = conn.execute(
         "SELECT event_type, created_at FROM events WHERE track_id = ?",
@@ -336,16 +469,12 @@ def get_status(track_id: str):
     ).fetchone()
     conn.close()
 
-    opened = any(e["event_type"] == "open" for e in events)
-    clicked = any(e["event_type"] == "click" for e in events)
-    bounced = any(e["event_type"] == "bounce" for e in events)
-
     return {
         "track_id": track_id,
         "status": hist["status"] if hist else "unknown",
-        "opened": opened,
-        "clicked": clicked,
-        "bounced": bounced,
+        "opened": any(e["event_type"] == "open" for e in events),
+        "clicked": any(e["event_type"] == "click" for e in events),
+        "bounced": any(e["event_type"] == "bounce" for e in events),
         "event_count": len(events),
     }
 
@@ -354,11 +483,11 @@ def get_status(track_id: str):
 def index_docs():
     return """
     <html>
-      <head><title>SheetMerge V2 Backend</title></head>
+      <head><title>SheetMerge V2 Enterprise Backend</title></head>
       <body style="font-family:sans-serif; padding:30px; background:#f8fafc; color:#0f172a;">
-        <h2>⚡ SheetMerge V2 Backend & Multi-Account Engine Active</h2>
+        <h2>⚡ SheetMerge V2 Enterprise Engine Active</h2>
         <p>Interactive OpenAPI Documentation: <a href="/docs">/docs</a></p>
-        <p>Open/Click Tracking & Multi-Account Alternation Endpoints Running.</p>
+        <p>Features: SPF/DKIM/DMARC Security Inspector, 5xx Hard Bounce Suppression, Anti-Spam Content Analyzer, and Multi-Account SMTP Relay.</p>
       </body>
     </html>
     """
