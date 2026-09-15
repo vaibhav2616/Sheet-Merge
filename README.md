@@ -19,13 +19,38 @@
 |---------|-------------|
 | 🎯 **Single Unified Status Column** | Replaced 10 cluttering columns with one clean **`SheetMerge Status`** column featuring rich pastel color badges (`Sent`, `Opened`, `Clicked`, `Replied`, `Positive Reply`, `Bounced`, `Blocked`, `Duplicate`) and comprehensive cell notes. |
 | 🛡️ **Guaranteed 50-Daily Deliveries** | If an email bounces or fails syntax verification, the engine does **not** stop; it continues through the sheet until exactly 50 *successful* deliveries are completed. |
+| 🛑 **5xx Permanent Bounce Interception** | Automatically detects hard bounces (`550 5.4.1`, `User unknown`) and immediately suppresses them from ever being contacted again. |
 | 🔻 **Automatic Bounce Isolation** | Pushes all bounced or blocked leads directly to the bottom of the sheet, keeping the active list fresh and actionable. |
 | ✨ **Auto-Generating Valid Contacts Sheet** | Progressively builds a dedicated `✨ Valid Contacts` sheet containing only verified, deliverable contacts as traversal proceeds daily. |
 | ⏰ **Automated Daily Sending (No Intervention)** | Native time-driven triggers wake up SheetMerge automatically every day at your chosen hour (e.g., 09:00 AM) to send 50 emails and record metrics without opening your browser. |
 | 🔄 **Multi-Account Alternation** | Supports alternating sending across 2 or more Google accounts (e.g. 50 from Account A, then 50 from Account B) via Apps Script multi-user sharing or FastAPI round-robin rotation. |
 | 🧠 **Anti-Spam Humanization Engine** | Avoids campaign blast signatures by randomizing dispatch intervals (e.g. 15s ±35% jitter) and sending via genuine user Gmail drafts. |
+| 🔐 **Enterprise DNS & Deliverability Guard** | Built-in SPF, DKIM, and DMARC inspection endpoints and content spam keyword analyzer to safeguard domain reputation against Microsoft Exchange and enterprise firewall rejections. |
 | 🎨 **Responsive Executive UI** | Clean, non-AI influenced interface with an instant **Light / Dark Mode** toggle, clean typography, and customizable layout. |
-| 🐍 **FastAPI High-Scale Backend** | Python FastAPI server handling multi-account rotation, open/click redirects, and permanent campaign history to prevent duplicate re-sends. |
+| 🐍 **FastAPI High-Scale Backend** | Python FastAPI server handling multi-account rotation, open/click redirects, socket timeout enforcement (`timeout=30s`), and permanent campaign history. |
+
+---
+
+## 🛡️ Enterprise Deliverability & Anti-Spam Guidelines
+
+To prevent enterprise mail servers (Microsoft Exchange, Outlook, Google Workspace, Proofpoint) from rejecting or throttling your self-made mail merge script, SheetMerge adheres to 3 foundational pillars:
+
+### 1. Script Logic & Throttling
+* **Paced Connection Frequency:** Never burst 50 emails simultaneously. SheetMerge introduces randomized human throttling (`random.uniform(2, 5)` seconds or 15s $\pm 35\%$ jitter) between dispatches to mimic natural user behavior.
+* **Catch & Halt 5xx Hard Bounces:** If a recipient returns a permanent rejection (e.g., `550 5.4.1 Recipient address rejected`), the address is immediately flagged, written to the suppression table, and permanently skipped. Continuing to contact dead addresses rapidly destroys IP and domain reputation.
+* **Configured Socket Timeouts:** All connection sockets explicitly set `timeout=30.0` seconds to prevent indefinite network hanging when enterprise firewalls silently drop connections.
+
+### 2. Domain Authentication (Crucial for Enterprise Inboxes)
+Enterprise mail filters automatically quarantine or reject script-generated emails lacking valid DNS security:
+* **SPF (Sender Policy Framework):** Ensure your domain's TXT record includes your sending relay (e.g., `v=spf1 include:_spf.google.com ~all`).
+* **DKIM (DomainKeys Identified Mail):** Cryptographically sign outbound messages so receiving mail exchange servers can verify the message wasn't spoofed or modified in transit.
+* **DMARC (Domain-based Message Authentication):** Publish a `_dmarc.yourdomain.com` TXT record (starting with `v=DMARC1; p=none; sp=none;`) to instruct destination servers on how to handle unauthenticated traffic.
+* *Use SheetMerge's built-in endpoint `POST /api/security/check-domain` to verify your domain records instantly.*
+
+### 3. Sending Behavior & List Hygiene
+* **Avoid Spammy Content:** Avoid subject line capitalization shouting, excessive exclamation marks, and sales trigger phrases. Check copy via `POST /api/security/analyze-content`.
+* **Authenticated Relays:** Send via Google Workspace OAuth or reputable authenticated SMTP relays rather than untrusted raw server IPs.
+* **Pre-Flight List Sanitization:** Pre-validate syntax, disposable domains, and MX reachability using `POST /api/security/clean-list` before launching any outreach.
 
 ---
 
