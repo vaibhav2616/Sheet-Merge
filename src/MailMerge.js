@@ -146,9 +146,19 @@ function _doMailMerge(params) {
     errors: []
   };
 
-  // 1. Load Gmail draft if selected
+  // Require an active draft or template before any email can be sent
+  if (!params.draftId && !params.bodyTemplate) {
+    throw new Error('No Gmail draft selected. Please select a Gmail draft before starting mail merge.');
+  }
+
+  // 1. Load Gmail draft if selected and retain preference
   var draftAttachments = [];
   if (params.draftId) {
+    saveConfig({ draftId: params.draftId });
+    try {
+      PropertiesService.getUserProperties().setProperty('LAST_SELECTED_DRAFT_ID', params.draftId);
+    } catch (eProp) {}
+
     try {
       var draft = GmailApp.getDraft(params.draftId);
       if (draft) {
@@ -160,9 +170,12 @@ function _doMailMerge(params) {
         if (!params.bodyTemplate) {
           params.bodyTemplate = draftMsg.getBody();
         }
+      } else {
+        throw new Error('Selected Gmail draft could not be found. It may have been deleted or sent in Gmail.');
       }
     } catch (e) {
       Logger.log('Draft error: ' + e.message);
+      throw new Error('Could not load draft: ' + e.message);
     }
   }
 
@@ -532,7 +545,16 @@ function sendTestEmail(params) {
   var body = params.bodyTemplate || '';
   var attachments = [];
 
+  if (!params.draftId && !params.bodyTemplate) {
+    throw new Error('Please select a Gmail draft before sending a test email.');
+  }
+
   if (params.draftId) {
+    saveConfig({ draftId: params.draftId });
+    try {
+      PropertiesService.getUserProperties().setProperty('LAST_SELECTED_DRAFT_ID', params.draftId);
+    } catch (eProp) {}
+
     try {
       var draft = GmailApp.getDraft(params.draftId);
       if (draft) {

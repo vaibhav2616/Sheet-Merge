@@ -543,7 +543,7 @@
 
     <!-- Action Buttons -->
     <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
-      <button class="btn btn-secondary" onclick="sendTestEmail()">✉️ Send Test Email to Me</button>
+      <button class="btn btn-secondary" id="testEmailBtn" onclick="sendTestEmail()">✉️ Send Test Email to Me</button>
       <button class="btn btn-primary" id="startMergeBtn" onclick="startMailMerge()">🚀 Send 50 Emails</button>
     </div>
 
@@ -783,18 +783,71 @@
       }).getDataColumns();
     }
 
+    function updateSendButtonState() {
+      const draftId = document.getElementById('draftSelect').value;
+      const btn = document.getElementById('startMergeBtn');
+      const testBtn = document.getElementById('testEmailBtn');
+      if (!draftId) {
+        if (btn) {
+          btn.disabled = true;
+          btn.style.opacity = '0.55';
+          btn.style.cursor = 'not-allowed';
+          btn.title = 'Please select a Gmail draft to proceed';
+        }
+        if (testBtn) {
+          testBtn.disabled = true;
+          testBtn.style.opacity = '0.55';
+          testBtn.style.cursor = 'not-allowed';
+        }
+      } else {
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+          btn.title = 'Start mail merge with selected draft';
+        }
+        if (testBtn) {
+          testBtn.disabled = false;
+          testBtn.style.opacity = '1';
+          testBtn.style.cursor = 'pointer';
+        }
+      }
+    }
+
     function loadDrafts() {
       if (typeof google === 'undefined' || !google.script) return;
-      google.script.run.withSuccessHandler(function(drafts) {
-        cachedDrafts = drafts || [];
+      google.script.run.withSuccessHandler(function(res) {
+        const drafts = res.drafts || (Array.isArray(res) ? res : []);
+        const lastId = res.lastDraftId || '';
+        cachedDrafts = drafts;
+
         const sel = document.getElementById('draftSelect');
-        sel.innerHTML = '<option value="">-- Choose a Gmail Draft (recommended) --</option>';
+        sel.innerHTML = '<option value="">-- Choose a Gmail Draft (required to send) --</option>';
+
+        if (drafts.length === 0) {
+          sel.innerHTML = '<option value="">⚠️ No Gmail drafts found — please create one in Gmail</option>';
+          updateSendButtonState();
+          return;
+        }
+
         drafts.forEach(d => {
           const opt = document.createElement('option');
           opt.value = d.id;
           opt.textContent = (d.subject || '(No Subject)') + ' [' + (d.tags.length ? d.tags.length + ' tags' : 'plain') + ']';
           sel.appendChild(opt);
         });
+
+        // Rule: If there is ONLY ONE draft, it automatically becomes the default!
+        if (drafts.length === 1) {
+          sel.value = drafts[0].id;
+          onDraftChange();
+        } else if (lastId && drafts.some(d => d.id === lastId)) {
+          // Rule: Retain the last used email draft
+          sel.value = lastId;
+          onDraftChange();
+        } else {
+          updateSendButtonState();
+        }
       })._sidebarGetGmailDrafts();
     }
 
@@ -809,10 +862,19 @@
     function onDraftChange() {
       const draftId = document.getElementById('draftSelect').value;
       const box = document.getElementById('draftTagsBox');
+
+      updateSendButtonState();
+
       if (!draftId) {
         box.style.display = 'none';
         return;
       }
+
+      // Persist last selected draft
+      if (typeof google !== 'undefined' && google.script) {
+        google.script.run._sidebarSaveDraftSelection(draftId);
+      }
+
       const draft = cachedDrafts.find(d => d.id === draftId);
       if (!draft || !draft.tags || draft.tags.length === 0) {
         box.style.display = 'block';
@@ -831,6 +893,10 @@
 
     function sendTestEmail() {
       const draftId = document.getElementById('draftSelect').value || null;
+      if (!draftId) {
+        showToast('Please select a Gmail draft before sending a test email.', 'danger');
+        return;
+      }
       const senderName = document.getElementById('senderNameInput').value || '';
       showToast('Sending test email to your Gmail...', 'info');
       google.script.run
@@ -852,9 +918,15 @@
     }
 
     function startMailMerge() {
+      const draftId = document.getElementById('draftSelect').value || null;
+      if (!draftId) {
+        showToast('Please select a Gmail draft before starting mail merge.', 'danger');
+        return;
+      }
+
       const limit = parseInt(document.getElementById('dailyLimitInput').value) || 50;
       const params = {
-        draftId: document.getElementById('draftSelect').value || null,
+        draftId: draftId,
         emailColumn: document.getElementById('emailColSelect').value || 'Email',
         senderName: document.getElementById('senderNameInput').value || '',
         startRow: parseInt(document.getElementById('startRowInput').value) || 2,

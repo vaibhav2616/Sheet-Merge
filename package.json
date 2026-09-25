@@ -5,5 +5,8 @@
   "private": true,
   "scripts": {
     "lint": "node --check src/*.js"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.4.1"
   }
 }

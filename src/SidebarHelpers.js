@@ -15,7 +15,25 @@ function _sidebarPreviewEmail(previewRow, subjectTpl, bodyTpl, draftId) {
 }
 
 function _sidebarGetGmailDrafts() {
-  return getGmailDraftsList();
+  var list = getGmailDraftsList();
+  var lastDraftId = '';
+  try {
+    lastDraftId = PropertiesService.getUserProperties().getProperty('LAST_SELECTED_DRAFT_ID') || getConfig().draftId || '';
+  } catch (e) {}
+  return {
+    drafts: list,
+    lastDraftId: lastDraftId
+  };
+}
+
+function _sidebarSaveDraftSelection(draftId) {
+  if (draftId) {
+    saveConfig({ draftId: draftId });
+    try {
+      PropertiesService.getUserProperties().setProperty('LAST_SELECTED_DRAFT_ID', draftId);
+    } catch (e) {}
+  }
+  return { success: true };
 }
 
 function _sidebarValidateDraft(draftId) {
