@@ -3,27 +3,9 @@
 .clasp.json
 .claspignore
 
-# ── Python backend ────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-.env
-*.egg-info/
-dist/
-build/
-*.egg
-.pytest_cache/
-.mypy_cache/
-
-# Backend data & secrets
-backend/data/
-backend/token.json
-backend/credentials.json
+# ── Node ──────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
 
 # ── OS ────────────────────────────────────────────────────────
 .DS_Store
@@ -36,9 +18,5 @@ Desktop.ini
 *.swp
 *.swo
 
-# ── Node / Jest ───────────────────────────────────────────────
-node_modules/
-npm-debug.log*
-
-# ── Decisions doc (personal study notes) ─────────────────────
+# ── Decisions doc (personal notes) ───────────────────────────
 decisions.md
