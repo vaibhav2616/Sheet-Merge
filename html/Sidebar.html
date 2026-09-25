@@ -3,65 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SheetMerge Sidebar v2</title>
+  <title>SheetMerge — Modern Mail Merge Sidebar</title>
   <style>
-    /* ── Responsive Executive Theme (Light & Dark) ── */
     :root {
       --bg: #f8fafc;
       --surface: #ffffff;
       --surface-subtle: #f1f5f9;
       --border: #e2e8f0;
-      --border-focus: #94a3b8;
+      --border-focus: #6366f1;
       --text: #0f172a;
       --text-muted: #64748b;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --success: #16a34a;
-      --success-subtle: #dcfce7;
-      --warning: #d97706;
-      --warning-subtle: #fef3c7;
-      --danger: #dc2626;
-      --danger-subtle: #fee2e2;
-      --radius: 8px;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --primary: #4f46e5;
+      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --primary-glow: rgba(79, 70, 229, 0.25);
+      --success: #10b981;
+      --success-subtle: #ecfdf5;
+      --success-border: #a7f3d0;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --danger-subtle: #fef2f2;
+      --danger-border: #fecaca;
+      --radius: 10px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08);
+      --shadow-lg: 0 10px 20px -5px rgba(0,0,0,0.1);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 
     [data-theme="dark"] {
-      --bg: #0f172a;
-      --surface: #1e293b;
-      --surface-subtle: #334155;
-      --border: #334155;
-      --border-focus: #64748b;
+      --bg: #0b0f19;
+      --surface: #111827;
+      --surface-subtle: #1e293b;
+      --border: #2d3748;
+      --border-focus: #818cf8;
       --text: #f8fafc;
       --text-muted: #94a3b8;
-      --accent: #3b82f6;
-      --accent-hover: #60a5fa;
-      --success: #22c55e;
-      --success-subtle: #14532d;
-      --warning: #f59e0b;
-      --warning-subtle: #78350f;
-      --danger: #ef4444;
-      --danger-subtle: #7f1d1d;
+      --primary: #6366f1;
+      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --success: #34d399;
+      --success-subtle: rgba(16, 185, 129, 0.12);
+      --success-border: rgba(16, 185, 129, 0.3);
+      --danger: #f87171;
+      --danger-hover: #ef4444;
+      --danger-subtle: rgba(239, 68, 68, 0.12);
+      --danger-border: rgba(239, 68, 68, 0.3);
+      --shadow-md: 0 4px 8px rgba(0,0,0,0.4);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: var(--font-family);
+      font-family: var(--font);
       background: var(--bg);
       color: var(--text);
       font-size: 13px;
       line-height: 1.5;
-      padding-bottom: 90px;
+      padding-bottom: 24px;
       transition: background-color 0.2s, color 0.2s;
+      overflow-x: hidden;
     }
 
     /* Header */
     .top-header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 14px 16px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -72,10 +79,19 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .brand-icon {
-      font-size: 20px;
+      width: 28px;
+      height: 28px;
+      background: var(--primary-gradient);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      box-shadow: 0 2px 8px var(--primary-glow);
     }
     .brand-title {
       font-size: 14px;
@@ -83,35 +99,56 @@
       letter-spacing: -0.2px;
     }
     .brand-badge {
-      font-size: 10px;
-      font-weight: 600;
-      background: var(--surface-subtle);
-      color: var(--text-muted);
-      padding: 2px 6px;
+      font-size: 9px;
+      font-weight: 700;
+      background: var(--primary-glow);
+      color: var(--primary);
+      padding: 1px 5px;
       border-radius: 4px;
-      border: 1px solid var(--border);
+      text-transform: uppercase;
     }
     .theme-toggle-btn {
       background: var(--surface-subtle);
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--text);
-      padding: 5px 8px;
-      font-size: 12px;
-      cursor: pointer;
+      width: 28px;
+      height: 28px;
       display: flex;
       align-items: center;
-      gap: 4px;
-    }
-    .theme-toggle-btn:hover {
-      background: var(--border);
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
     }
 
-    /* Tabs */
+    /* Subheader Quota Bar */
+    .quota-bar {
+      padding: 8px 16px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .quota-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      display: inline-block;
+      margin-right: 4px;
+      box-shadow: 0 0 5px var(--success);
+    }
+
+    /* Nav Tabs */
     .nav-tabs {
       display: flex;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
+      padding: 0 8px;
     }
     .tab-btn {
       flex: 1;
@@ -121,45 +158,52 @@
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
+      border: none;
+      background: transparent;
       border-bottom: 2px solid transparent;
-      background: none;
-      border-top: none;
-      border-left: none;
-      border-right: none;
       transition: all 0.15s;
     }
-    .tab-btn:hover {
-      color: var(--text);
-    }
+    .tab-btn:hover { color: var(--text); }
     .tab-btn.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
+      color: var(--primary);
+      border-bottom-color: var(--primary);
       font-weight: 700;
     }
 
     /* Panels */
-    .tab-panel {
+    .panel-view {
       display: none;
-      padding: 16px;
+      padding: 14px 16px;
+      animation: fadeIn 0.2s ease;
     }
-    .tab-panel.active {
-      display: block;
+    .panel-view.active {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    /* Card Components */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Card styling */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 14px;
-      margin-bottom: 14px;
       box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      border-color: var(--border-focus);
     }
     .card-title {
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       color: var(--text-muted);
       margin-bottom: 10px;
       display: flex;
@@ -167,64 +211,72 @@
       justify-content: space-between;
     }
 
-    /* Form Inputs */
+    /* Controls */
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
+    }
+    .form-group:last-child {
+      margin-bottom: 0;
     }
     .form-label {
       display: block;
       font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
-    input[type="text"], input[type="number"], select, textarea {
+    .form-control {
       width: 100%;
-      background: var(--surface);
+      background: var(--surface-subtle);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 8px;
       color: var(--text);
       padding: 8px 10px;
       font-size: 12px;
       font-family: inherit;
       outline: none;
-      transition: border-color 0.15s;
+      transition: all 0.15s;
     }
-    input:focus, select:focus, textarea:focus {
+    .form-control:focus {
+      background: var(--surface);
       border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--primary-glow);
     }
-    .input-hint {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
     .row-split {
       display: flex;
-      gap: 10px;
+      gap: 8px;
     }
     .row-split > div {
       flex: 1;
     }
 
-    /* Toggle switches */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .toggle-row:last-child {
-      border-bottom: none;
-    }
-    .toggle-desc {
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .toggle-sub {
+    /* Tag chips */
+    .chips-box {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: var(--surface-subtle);
+      border-radius: 6px;
+      border: 1px dashed var(--border);
       font-size: 11px;
-      color: var(--text-muted);
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin: 2px;
+    }
+    .chip-matched {
+      background: var(--success-subtle);
+      border: 1px solid var(--success-border);
+      color: var(--success);
+    }
+    .chip-missing {
+      background: var(--danger-subtle);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
     }
 
     /* Buttons */
@@ -233,21 +285,27 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      padding: 8px 14px;
+      padding: 9px 14px;
       font-size: 12px;
       font-weight: 600;
-      border-radius: var(--radius);
+      border-radius: 8px;
       cursor: pointer;
       border: 1px solid transparent;
       transition: all 0.15s;
+      font-family: inherit;
       width: 100%;
     }
+    .btn:active {
+      transform: scale(0.98);
+    }
     .btn-primary {
-      background: var(--accent);
+      background: var(--primary-gradient);
       color: #ffffff;
+      box-shadow: 0 2px 8px var(--primary-glow);
     }
     .btn-primary:hover {
-      background: var(--accent-hover);
+      box-shadow: 0 4px 14px var(--primary-glow);
+      opacity: 0.96;
     }
     .btn-secondary {
       background: var(--surface);
@@ -257,332 +315,462 @@
     .btn-secondary:hover {
       background: var(--surface-subtle);
     }
-    .btn-outline-danger {
-      background: transparent;
-      border-color: var(--danger);
-      color: var(--danger);
-    }
-    .btn-outline-danger:hover {
+    .btn-danger {
       background: var(--danger-subtle);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .btn-danger:hover {
+      background: var(--danger);
+      color: #ffffff;
     }
 
-    /* Metrics Grid */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .metric-box {
-      background: var(--surface-subtle);
+    /* ── Live Dispatch HUD (Stage 2) ── */
+    .hud-box {
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 10px;
+      padding: 18px 14px;
       text-align: center;
+      box-shadow: var(--shadow-md);
+      position: relative;
     }
-    .metric-value {
-      font-size: 18px;
-      font-weight: 700;
+    .hud-box::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--primary-gradient);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .gauge-wrap {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      margin: 8px auto 12px;
+    }
+    .gauge-svg {
+      transform: rotate(-90deg);
+      width: 110px;
+      height: 110px;
+    }
+    .gauge-track {
+      fill: none;
+      stroke: var(--surface-subtle);
+      stroke-width: 8;
+    }
+    .gauge-fill {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 295;
+      stroke-dashoffset: 295;
+      transition: stroke-dashoffset 0.3s ease;
+    }
+    .gauge-center-text {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .gauge-percent {
+      font-size: 22px;
+      font-weight: 800;
       color: var(--text);
     }
-    .metric-label {
-      font-size: 10px;
+    .gauge-sub {
+      font-size: 9px;
       font-weight: 600;
       color: var(--text-muted);
       text-transform: uppercase;
-      margin-top: 2px;
     }
 
-    /* Floating Action Footer */
-    .action-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 12px 16px;
-      display: flex;
-      gap: 10px;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-      z-index: 20;
+    .hud-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 10px 0 14px;
     }
-
-    /* Notification toast */
-    .toast-msg {
-      display: none;
-      padding: 10px 12px;
-      border-radius: var(--radius);
-      margin-bottom: 12px;
-      font-size: 12px;
-    }
-    .toast-info {
+    .hud-stat-cell {
       background: var(--surface-subtle);
       border: 1px solid var(--border);
-      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 4px;
     }
-    .toast-success {
-      background: var(--success-subtle);
-      border: 1px solid var(--success);
-      color: var(--success);
+    .hud-stat-num {
+      font-size: 15px;
+      font-weight: 700;
     }
+    .hud-stat-desc {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .ticker-bar {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .beacon-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Toast */
+    .toast {
+      display: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    .toast.show { display: block; }
+    .toast-info { background: var(--surface-subtle); border: 1px solid var(--border); color: var(--text); }
+    .toast-success { background: var(--success-subtle); border: 1px solid var(--success-border); color: var(--success); }
+    .toast-danger { background: var(--danger-subtle); border: 1px solid var(--danger-border); color: var(--danger); }
   </style>
 </head>
 <body>
 
-  <!-- Top Header with Theme Switcher -->
-  <div class="top-header">
+  <!-- Top Header -->
+  <header class="top-header">
     <div class="brand">
-      <span class="brand-icon">✉️</span>
+      <div class="brand-icon">✉️</div>
       <div>
-        <div style="display:flex; align-items:center; gap:6px;">
+        <div style="display:flex; align-items:center; gap:5px;">
           <span class="brand-title">SheetMerge</span>
-          <span class="brand-badge">v2.0</span>
+          <span class="brand-badge">v2.2</span>
         </div>
       </div>
     </div>
-    <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
-      <span id="themeIcon">🌙</span> <span id="themeText">Dark</span>
-    </button>
+    <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  </header>
+
+  <!-- Quota bar -->
+  <div class="quota-bar">
+    <span><span class="quota-dot"></span><span id="quotaLabel">Checking quota...</span></span>
+    <button class="btn-secondary" style="padding:2px 8px; font-size:10px; width:auto; border-radius:4px;" onclick="loadQuota()">Refresh</button>
   </div>
 
   <!-- Navigation Tabs -->
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('merge')">Mail Merge</button>
-    <button class="tab-btn" onclick="switchTab('automation')">Automation</button>
-    <button class="tab-btn" onclick="switchTab('accounts')">Accounts</button>
-    <button class="tab-btn" onclick="switchTab('analytics')">Overview</button>
+  <nav class="nav-tabs" id="tabNav">
+    <button class="tab-btn active" id="tabMerge" onclick="switchTab('merge')">Mail Merge</button>
+    <button class="tab-btn" id="tabAuto" onclick="switchTab('automation')">Automation</button>
+    <button class="tab-btn" id="tabStats" onclick="switchTab('overview')">Overview</button>
+  </nav>
+
+  <div style="padding:10px 16px 0;">
+    <div id="sideToast" class="toast"></div>
   </div>
 
-  <!-- 1. Merge Configuration Panel -->
-  <div class="tab-panel active" id="panel-merge">
-    <div id="statusToast" class="toast-msg toast-info"></div>
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- 1. MERGE STAGE (DYNAMIC & NON-STACKED)                       -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="panel-view active" id="panelMerge">
 
-    <!-- Gmail Draft Selection -->
+    <!-- Step 1: Draft Picker -->
     <div class="card">
-      <div class="card-title">1. Select Gmail Draft</div>
+      <div class="card-title">
+        <span>1. Select Gmail Draft</span>
+        <button class="btn-secondary" style="padding:2px 8px; font-size:10px; width:auto; border-radius:4px;" onclick="loadDrafts()">Refresh</button>
+      </div>
       <div class="form-group">
-        <label class="form-label" for="draftSelect">Gmail Draft</label>
-        <select id="draftSelect" onchange="onDraftSelected()">
+        <select id="draftSelect" class="form-control" onchange="onDraftChange()">
           <option value="">-- Choose a Gmail Draft (recommended) --</option>
         </select>
-        <div class="input-hint">Using a Gmail draft preserves exact typography, formatting, and avoids campaign spam filters.</div>
       </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <button class="btn btn-secondary" onclick="loadDrafts()">🔄 Refresh Drafts</button>
-      </div>
+      <div id="draftTagsBox" class="chips-box" style="display:none;"></div>
     </div>
 
-    <!-- Recipient & Batch Row Settings -->
+    <!-- Step 2: Recipient Column & Sender -->
     <div class="card">
-      <div class="card-title">2. Recipient & Row Boundaries</div>
+      <div class="card-title">2. Recipient & Boundaries</div>
       <div class="form-group">
-        <label class="form-label" for="emailColSelect">Email Column Header</label>
-        <select id="emailColSelect"></select>
+        <label class="form-label" for="emailColSelect">Email Column</label>
+        <select id="emailColSelect" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="senderNameInput">Sender Name</label>
+        <input type="text" id="senderNameInput" class="form-control" placeholder="e.g. John Doe">
       </div>
       <div class="row-split">
         <div class="form-group">
           <label class="form-label" for="startRowInput">Start Row</label>
-          <input type="number" id="startRowInput" min="2" value="2">
+          <input type="number" id="startRowInput" class="form-control" min="2" value="2">
         </div>
         <div class="form-group">
-          <label class="form-label" for="dailyLimitInput">Daily Limit (Quota)</label>
-          <input type="number" id="dailyLimitInput" min="1" max="500" value="50">
+          <label class="form-label" for="dailyLimitInput">Daily Limit</label>
+          <input type="number" id="dailyLimitInput" class="form-control" min="1" max="100" value="50">
         </div>
       </div>
-      <div class="input-hint">The engine sends until exactly 50 <b>successful</b> emails are delivered, skipping or moving failed ones.</div>
     </div>
 
-    <!-- Anti-Spam Humanization Parameters -->
+    <!-- Step 3: Anti-Spam Options -->
     <div class="card">
-      <div class="card-title">3. Anti-Spam & Deliverability</div>
-      <div class="form-group">
-        <label class="form-label" for="sendDelayInput">Base Interval (Seconds)</label>
-        <input type="number" id="sendDelayInput" min="5" max="120" value="15">
-      </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-desc">Randomized Timing Jitter</div>
-          <div class="toggle-sub">Varies delay ±35% between sends to appear 100% human</div>
-        </div>
+      <div class="card-title">3. Deliverability Safeguards</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:11px; font-weight:600;">Randomized Delay Jitter (15s ±35%)</span>
         <input type="checkbox" id="jitterCheck" checked>
       </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-desc">Auto-Move Bounced to Bottom</div>
-          <div class="toggle-sub">Automatically pushes invalid or bounced leads to end</div>
-        </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; font-weight:600;">Auto-Move Bounced to Bottom</span>
         <input type="checkbox" id="moveBouncedCheck" checked>
       </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-desc">Auto-Build Valid Contacts Sheet</div>
-          <div class="toggle-sub">Maintains verified clean contacts in separate tab</div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+      <button class="btn btn-secondary" onclick="sendTestEmail()">✉️ Send Test Email to Me</button>
+      <button class="btn btn-primary" id="startMergeBtn" onclick="startMailMerge()">🚀 Send 50 Emails</button>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- 2. LIVE DISPATCH HUD (ANIMATED & WITH STOP BUTTON)           -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="panel-view" id="panelHUD">
+    <div class="hud-box">
+      <h3 style="font-size:14px; font-weight:700;">Live Dispatch in Progress</h3>
+      <p style="font-size:11px; color:var(--text-muted); margin-top:2px;">Sending at human pace with randomized jitter.</p>
+
+      <!-- Gauge -->
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 110 110">
+          <circle class="gauge-track" cx="55" cy="55" r="47"></circle>
+          <circle class="gauge-fill" id="hudCircle" cx="55" cy="55" r="47"></circle>
+        </svg>
+        <div class="gauge-center-text">
+          <span class="gauge-percent" id="hudPercent">0%</span>
+          <span class="gauge-sub" id="hudRatio">0 / 50</span>
         </div>
-        <input type="checkbox" id="buildValidCheck" checked>
       </div>
+
+      <!-- Stats -->
+      <div class="hud-stats-grid">
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="hudSent" style="color:var(--success);">0</div>
+          <div class="hud-stat-desc">Sent</div>
+        </div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="hudRemaining">50</div>
+          <div class="hud-stat-desc">Remaining</div>
+        </div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="hudBounced" style="color:var(--danger);">0</div>
+          <div class="hud-stat-desc">Failed</div>
+        </div>
+      </div>
+
+      <!-- Live Ticker -->
+      <div class="ticker-bar">
+        <span class="beacon-dot"></span>
+        <span id="hudTickerText" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Starting dispatch engine...</span>
+      </div>
+
+      <!-- 🛑 PROMINENT STOP SWITCH BUTTON -->
+      <button class="btn btn-danger" id="stopBtn" onclick="stopMergeNow()">
+        🛑 Stop Mail Merge
+      </button>
     </div>
   </div>
 
-  <!-- 2. Automation & Scheduling Panel -->
-  <div class="tab-panel" id="panel-automation">
-    <div class="card">
-      <div class="card-title">Daily Automated Sending</div>
-      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-        SheetMerge can automatically wake up every day, pick up from where it left off, and deliver 50 emails without opening your browser.
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- 3. COMPLETION STAGE                                          -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="panel-view" id="panelComplete">
+    <div class="card" style="text-align:center; padding:24px 16px;">
+      <div style="font-size:36px; margin-bottom:8px;" id="compIcon">🎉</div>
+      <h3 style="font-size:16px; font-weight:800;" id="compTitle">Merge Complete!</h3>
+      <p style="font-size:12px; color:var(--text-muted); margin:6px 0 16px;" id="compDesc">
+        Delivered emails successfully.
       </p>
 
+      <div class="hud-stats-grid" style="margin-bottom:16px;">
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="compSent" style="color:var(--success);">0</div>
+          <div class="hud-stat-desc">Sent</div>
+        </div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="compSkipped">0</div>
+          <div class="hud-stat-desc">Skipped</div>
+        </div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="compFailed">0</div>
+          <div class="hud-stat-desc">Bounced</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="switchTab('merge')">← Send Another Batch</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- 4. AUTOMATION PANEL                                          -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="panel-view" id="panelAutomation">
+    <div class="card">
+      <div class="card-title">Daily Automated 50-Send</div>
+      <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+        Sends 50 emails daily at chosen hour, resuming from last unmerged contact.
+      </p>
       <div class="form-group">
-        <label class="form-label" for="dailyHourSelect">Scheduled Dispatch Hour</label>
-        <select id="dailyHourSelect">
+        <label class="form-label" for="autoHourSelect">Scheduled Dispatch Hour</label>
+        <select id="autoHourSelect" class="form-control">
           <option value="8">08:00 AM</option>
           <option value="9" selected>09:00 AM (Recommended)</option>
           <option value="10">10:00 AM</option>
-          <option value="11">11:00 AM</option>
           <option value="14">02:00 PM</option>
           <option value="16">04:00 PM</option>
         </select>
       </div>
-
-      <div style="display:flex; gap:10px; margin-top:14px;">
-        <button class="btn btn-primary" onclick="enableDailyTrigger()">⚡ Enable Daily 50-Send Trigger</button>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
+        <button class="btn btn-primary" onclick="enableAutoTrigger()">⚡ Enable Daily 50-Send Trigger</button>
+        <button class="btn btn-secondary" onclick="disableAutoTrigger()">Disable Trigger</button>
       </div>
-      <div style="margin-top:8px;">
-        <button class="btn btn-outline-danger" onclick="disableDailyTrigger()">Disable Daily Trigger</button>
-      </div>
-
-      <div id="triggerStatusBox" style="margin-top:12px; padding:8px 10px; background:var(--surface-subtle); border-radius:6px; font-size:11px;">
-        Checking trigger status...
+      <div id="triggerStatusText" style="margin-top:10px; font-size:11px; padding:6px 8px; background:var(--surface-subtle); border-radius:6px;">
+        Checking schedule...
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">List Maintenance Shortcuts</div>
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="btn btn-secondary" onclick="moveBouncedNow()">🔻 Move Bounced & Blocked Leads to Bottom</button>
-        <button class="btn btn-secondary" onclick="generateValidListNow()">✨ Build / Refresh Valid Contacts Sheet</button>
-        <button class="btn btn-secondary" onclick="refreshStatusesNow()">🔄 Refresh Statuses & Bounces from Inbox</button>
+      <div class="card-title">Maintenance Tools</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="btn btn-secondary" onclick="moveBouncedNow()">🔻 Move Bounces to Bottom</button>
+        <button class="btn btn-secondary" onclick="buildValidNow()">✨ Build Valid Contacts Sheet</button>
+        <button class="btn btn-secondary" onclick="refreshStatusesNow()">🔄 Refresh Statuses from Inbox</button>
       </div>
     </div>
   </div>
 
-  <!-- 3. Multi-Account Management Panel -->
-  <div class="tab-panel" id="panel-accounts">
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- 5. OVERVIEW PANEL                                            -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <div class="panel-view" id="panelOverview">
     <div class="card">
-      <div class="card-title">Multi-Account Rotation</div>
-      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-        Rotate sending between multiple Google accounts (e.g. 50 from Account A, then 50 from Account B) to protect domain reputation.
-      </p>
-
-      <div style="padding:10px; background:var(--surface-subtle); border-radius:6px; font-size:12px; margin-bottom:12px;">
-        <b>Current Active Account:</b> <span id="currentAccountLabel">Loading...</span>
+      <div class="card-title">
+        <span>Delivery Metrics</span>
+        <button class="btn-secondary" style="padding:2px 8px; font-size:10px; width:auto; border-radius:4px;" onclick="loadMetrics()">Refresh</button>
       </div>
-
-      <div class="card-title">How Alternation Works</div>
-      <div style="font-size:12px; color:var(--text-muted); line-height:1.6;">
-        <b>Option 1 (In-Sheet Apps Script):</b><br>
-        Share this Google Sheet with your secondary Google account (`Editor` permission). Open the sheet on Account 2 and set the Daily Trigger at a different hour (e.g. Account 1 at 09:00 AM, Account 2 at 03:00 PM). Both accounts update the single `SheetMerge Status` column sequentially!<br><br>
-        <b>Option 2 (FastAPI Backend):</b><br>
-        Authenticate multiple Gmail API credentials with the local FastAPI server (`http://localhost:8000/auth/add-account`). The server alternates dispatches across configured accounts automatically.
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. Overview & Metrics Panel -->
-  <div class="tab-panel" id="panel-analytics">
-    <div class="card">
-      <div class="card-title">Single Status Overview</div>
-      <div class="metrics-grid">
-        <div class="metric-box">
-          <div class="metric-value" id="mTotal">0</div>
-          <div class="metric-label">Total Leads</div>
+      <div class="hud-stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="stTotal">0</div>
+          <div class="hud-stat-desc">Total Leads</div>
         </div>
-        <div class="metric-box">
-          <div class="metric-value" id="mSent" style="color:var(--success);">0</div>
-          <div class="metric-label">Delivered</div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="stSent" style="color:var(--success);">0</div>
+          <div class="hud-stat-desc">Delivered</div>
         </div>
-        <div class="metric-box">
-          <div class="metric-value" id="mOpened" style="color:var(--accent);">0</div>
-          <div class="metric-label">Opened</div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="stOpened" style="color:var(--primary);">0</div>
+          <div class="hud-stat-desc">Opened</div>
         </div>
-        <div class="metric-box">
-          <div class="metric-value" id="mPositive" style="color:#059669;">0</div>
-          <div class="metric-label">Positive Reply</div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="stPositive" style="color:#059669;">0</div>
+          <div class="hud-stat-desc">Positive</div>
         </div>
-        <div class="metric-box">
-          <div class="metric-value" id="mBounced" style="color:var(--danger);">0</div>
-          <div class="metric-label">Bounced / Blocked</div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="stBounced" style="color:var(--danger);">0</div>
+          <div class="hud-stat-desc">Bounced</div>
         </div>
-        <div class="metric-box">
-          <div class="metric-value" id="mPending">0</div>
-          <div class="metric-label">Pending</div>
+        <div class="hud-stat-cell">
+          <div class="hud-stat-num" id="stPending">0</div>
+          <div class="hud-stat-desc">Pending</div>
         </div>
       </div>
-      <button class="btn btn-secondary" onclick="loadMetrics()">🔄 Refresh Stats</button>
+      <button class="btn btn-primary" onclick="google.script.run._sidebarCreateDashboardSheet()">
+        📊 Open Visual Dashboard Tab
+      </button>
     </div>
-
-    <div class="card">
-      <div class="card-title">Visual Reports</div>
-      <button class="btn btn-primary" onclick="openVisualDashboardSheet()">📊 Open Visual Dashboard Tab</button>
-    </div>
-  </div>
-
-  <!-- Persistent Bottom Action Bar -->
-  <div class="action-bar">
-    <button class="btn btn-secondary" style="flex:1;" onclick="previewCurrentRow()">👁️ Preview</button>
-    <button class="btn btn-primary" style="flex:2;" id="startMergeBtn" onclick="startMailMerge()">🚀 Send Daily Batch</button>
   </div>
 
   <script>
-    /* ── Theme Toggle ── */
+    let cachedDrafts = [];
+    let cachedCols = [];
+    let isMergeActive = false;
+
     function toggleTheme() {
       const html = document.documentElement;
-      const isDark = html.getAttribute('data-theme') === 'dark';
-      const newTheme = isDark ? 'light' : 'dark';
-      html.setAttribute('data-theme', newTheme);
-      document.getElementById('themeIcon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
-      document.getElementById('themeText').textContent = newTheme === 'dark' ? 'Light' : 'Dark';
-      localStorage.setItem('sm_theme', newTheme);
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('sm_theme', next);
     }
-
-    // Restore saved theme preference
     (function initTheme() {
       const saved = localStorage.getItem('sm_theme') || 'light';
       document.documentElement.setAttribute('data-theme', saved);
-      document.getElementById('themeIcon').textContent = saved === 'dark' ? '☀️' : '🌙';
-      document.getElementById('themeText').textContent = saved === 'dark' ? 'Light' : 'Dark';
+      document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
     })();
 
-    /* ── Tab Navigation ── */
     function switchTab(name) {
+      document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      event.target.classList.add('active');
-      document.getElementById('panel-' + name).classList.add('active');
-      if (name === 'analytics') loadMetrics();
-      if (name === 'automation') checkTriggerStatus();
+
+      if (name === 'merge') {
+        document.getElementById('panelMerge').classList.add('active');
+        document.getElementById('tabMerge').classList.add('active');
+      } else if (name === 'automation') {
+        document.getElementById('panelAutomation').classList.add('active');
+        document.getElementById('tabAuto').classList.add('active');
+        checkAutoTrigger();
+      } else if (name === 'overview') {
+        document.getElementById('panelOverview').classList.add('active');
+        document.getElementById('tabStats').classList.add('active');
+        loadMetrics();
+      }
     }
 
-    /* ── Toast messaging ── */
-    function showToast(msg, isSuccess) {
-      const t = document.getElementById('statusToast');
+    function showToast(msg, type = 'info') {
+      const t = document.getElementById('sideToast');
+      t.className = 'toast show toast-' + type;
       t.textContent = msg;
-      t.className = 'toast-msg ' + (isSuccess ? 'toast-success' : 'toast-info');
-      t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 6000);
+      setTimeout(() => { t.className = 'toast'; }, 5000);
     }
 
-    /* ── Initialization ── */
     window.onload = function() {
+      loadQuota();
       loadColumns();
       loadDrafts();
       loadProgress();
-      checkTriggerStatus();
     };
+
+    function loadQuota() {
+      if (typeof google === 'undefined' || !google.script) {
+        document.getElementById('quotaLabel').textContent = '100 sends left';
+        return;
+      }
+      google.script.run.withSuccessHandler(function(q) {
+        document.getElementById('quotaLabel').textContent = q.remainingQuota + ' sends left today';
+      })._sidebarGetQuota();
+    }
 
     function loadColumns() {
       if (typeof google === 'undefined' || !google.script) return;
       google.script.run.withSuccessHandler(function(cols) {
+        cachedCols = cols || [];
         const sel = document.getElementById('emailColSelect');
         sel.innerHTML = '';
         cols.forEach(c => {
@@ -598,12 +786,13 @@
     function loadDrafts() {
       if (typeof google === 'undefined' || !google.script) return;
       google.script.run.withSuccessHandler(function(drafts) {
+        cachedDrafts = drafts || [];
         const sel = document.getElementById('draftSelect');
         sel.innerHTML = '<option value="">-- Choose a Gmail Draft (recommended) --</option>';
         drafts.forEach(d => {
           const opt = document.createElement('option');
           opt.value = d.id;
-          opt.textContent = (d.subject || '(No Subject)') + ' [' + d.id.substring(0,6) + ']';
+          opt.textContent = (d.subject || '(No Subject)') + ' [' + (d.tags.length ? d.tags.length + ' tags' : 'plain') + ']';
           sel.appendChild(opt);
         });
       })._sidebarGetGmailDrafts();
@@ -617,116 +806,186 @@
       }).getProgressInfo();
     }
 
-    function onDraftSelected() {
+    function onDraftChange() {
       const draftId = document.getElementById('draftSelect').value;
-      if (!draftId) return;
-      showToast('Selected draft ready for merge.', true);
+      const box = document.getElementById('draftTagsBox');
+      if (!draftId) {
+        box.style.display = 'none';
+        return;
+      }
+      const draft = cachedDrafts.find(d => d.id === draftId);
+      if (!draft || !draft.tags || draft.tags.length === 0) {
+        box.style.display = 'block';
+        box.innerHTML = '<span style="color:var(--text-muted);">Standard template (no {{tags}}).</span>';
+        return;
+      }
+      box.style.display = 'block';
+      const colsLower = cachedCols.map(c => String(c).toLowerCase());
+      let html = '<b>Detected Tags:</b><br>';
+      draft.tags.forEach(t => {
+        const ok = colsLower.includes(t.toLowerCase());
+        html += '<span class="chip ' + (ok ? 'chip-matched' : 'chip-missing') + '">{{' + t + '}} ' + (ok ? '✓' : '✗') + '</span>';
+      });
+      box.innerHTML = html;
     }
 
-    /* ── Merge Dispatch ── */
-    function startMailMerge() {
-      const btn = document.getElementById('startMergeBtn');
-      btn.disabled = true;
-      btn.textContent = '⏳ Sending 50 Valid Batch...';
+    function sendTestEmail() {
+      const draftId = document.getElementById('draftSelect').value || null;
+      const senderName = document.getElementById('senderNameInput').value || '';
+      showToast('Sending test email to your Gmail...', 'info');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showToast('✅ Test sent to ' + res.recipient, 'success');
+        })
+        .withFailureHandler(function(err) {
+          showToast('Error: ' + err.message, 'danger');
+        })
+        ._sidebarSendTestEmail({ draftId: draftId, senderName: senderName });
+    }
 
+    function setGauge(pct) {
+      pct = Math.min(100, Math.max(0, pct));
+      const circum = 2 * Math.PI * 47; // ~295
+      const offset = circum - (pct / 100) * circum;
+      document.getElementById('hudCircle').style.strokeDashoffset = offset;
+      document.getElementById('hudPercent').textContent = Math.round(pct) + '%';
+    }
+
+    function startMailMerge() {
+      const limit = parseInt(document.getElementById('dailyLimitInput').value) || 50;
       const params = {
         draftId: document.getElementById('draftSelect').value || null,
         emailColumn: document.getElementById('emailColSelect').value || 'Email',
+        senderName: document.getElementById('senderNameInput').value || '',
         startRow: parseInt(document.getElementById('startRowInput').value) || 2,
-        dailyLimit: parseInt(document.getElementById('dailyLimitInput').value) || 50,
-        sendDelay: parseInt(document.getElementById('sendDelayInput').value) || 15,
+        dailyLimit: limit,
+        sendDelay: 14,
         randomJitter: document.getElementById('jitterCheck').checked,
         autoMoveBouncedToBottom: document.getElementById('moveBouncedCheck').checked,
-        autoBuildValidList: document.getElementById('buildValidCheck').checked
+        autoBuildValidList: true
       };
 
-      showToast('Dispatching emails at human pace with randomized jitter...', false);
+      isMergeActive = true;
+      document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
+      document.getElementById('panelHUD').classList.add('active');
+
+      setGauge(0);
+      document.getElementById('hudRatio').textContent = '0 / ' + limit;
+      document.getElementById('hudSent').textContent = '0';
+      document.getElementById('hudRemaining').textContent = limit;
+      document.getElementById('hudBounced').textContent = '0';
+      document.getElementById('hudTickerText').textContent = 'Sequentially dispatching at human pace...';
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('stopBtn').innerHTML = '🛑 Stop Mail Merge';
+
+      let sim = 0;
+      const timer = setInterval(() => {
+        if (!isMergeActive || sim >= 90) return;
+        sim += Math.random() * 5;
+        setGauge(sim);
+      }, 1500);
 
       google.script.run
         .withSuccessHandler(function(res) {
-          btn.disabled = false;
-          btn.textContent = '🚀 Send Daily Batch';
-          showToast('✅ Finished! Sent: ' + res.sent + ', Failed: ' + res.failed + ', Skipped: ' + res.skipped, true);
-          loadProgress();
-          loadMetrics();
+          isMergeActive = false;
+          clearInterval(timer);
+          setGauge(100);
+
+          setTimeout(() => {
+            document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
+            document.getElementById('panelComplete').classList.add('active');
+            if (res.stopped) {
+              document.getElementById('compIcon').textContent = '🛑';
+              document.getElementById('compTitle').textContent = 'Mail Merge Stopped';
+              document.getElementById('compDesc').textContent = 'Stopped cleanly by user. ' + res.sent + ' emails delivered.';
+            } else {
+              document.getElementById('compIcon').textContent = '🎉';
+              document.getElementById('compTitle').textContent = 'Merge Complete!';
+              document.getElementById('compDesc').textContent = 'Successfully delivered ' + res.sent + ' emails.';
+            }
+            document.getElementById('compSent').textContent = res.sent;
+            document.getElementById('compSkipped').textContent = res.skipped;
+            document.getElementById('compFailed').textContent = res.failed;
+          }, 600);
         })
         .withFailureHandler(function(err) {
-          btn.disabled = false;
-          btn.textContent = '🚀 Send Daily Batch';
-          showToast('Error: ' + err.message, false);
+          isMergeActive = false;
+          clearInterval(timer);
+          showToast('Error: ' + err.message, 'danger');
+          switchTab('merge');
         })
         .runMailMerge(params);
     }
 
-    /* ── Automation & Triggers ── */
-    function checkTriggerStatus() {
+    /* ── STOP BUTTON HANDLER ── */
+    function stopMergeNow() {
+      const btn = document.getElementById('stopBtn');
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Halting dispatch...';
+      document.getElementById('hudTickerText').textContent = 'Sending stop signal to SheetMerge engine...';
+
+      google.script.run
+        .withSuccessHandler(function() {
+          showToast('🛑 Stop signal sent. Halting after current send.', 'danger');
+        })
+        .stopSheetMerge();
+    }
+
+    function checkAutoTrigger() {
       if (typeof google === 'undefined' || !google.script) return;
-      google.script.run.withSuccessHandler(function(status) {
-        const box = document.getElementById('triggerStatusBox');
-        if (status.enabled) {
-          box.innerHTML = '<span style="color:var(--success); font-weight:700;">● Active</span>: Scheduled daily at ' + status.hour + ':00.';
+      google.script.run.withSuccessHandler(function(s) {
+        const box = document.getElementById('triggerStatusText');
+        if (s.enabled) {
+          box.innerHTML = '<span style="color:var(--success); font-weight:700;">● Active:</span> Daily trigger scheduled for ' + s.hour + ':00 AM.';
         } else {
-          box.innerHTML = '<span style="color:var(--text-muted); font-weight:600;">○ Inactive</span>: No daily schedule configured.';
+          box.innerHTML = '<span style="color:var(--text-muted);">○ Inactive: No daily schedule configured.</span>';
         }
       })._sidebarGetDailyTriggerStatus();
     }
 
-    function enableDailyTrigger() {
-      const hour = parseInt(document.getElementById('dailyHourSelect').value) || 9;
-      google.script.run.withSuccessHandler(function(res) {
-        showToast('Daily trigger scheduled for ' + res.hour + ':00!', true);
-        checkTriggerStatus();
+    function enableAutoTrigger() {
+      const hour = parseInt(document.getElementById('autoHourSelect').value) || 9;
+      google.script.run.withSuccessHandler(function(r) {
+        showToast('Daily schedule active at ' + r.hour + ':00 AM!', 'success');
+        checkAutoTrigger();
       })._sidebarSetupDailyTrigger(hour);
     }
 
-    function disableDailyTrigger() {
+    function disableAutoTrigger() {
       google.script.run.withSuccessHandler(function() {
-        showToast('Daily triggers disabled.', true);
-        checkTriggerStatus();
+        showToast('Daily trigger disabled.', 'info');
+        checkAutoTrigger();
       })._sidebarRemoveDailyTrigger();
     }
 
     function moveBouncedNow() {
-      google.script.run.withSuccessHandler(function(res) {
-        showToast('Moved ' + res.bouncedCount + ' bounced/blocked contacts to the bottom.', true);
+      google.script.run.withSuccessHandler(function(r) {
+        showToast('Moved ' + r.bouncedCount + ' bounced leads to the bottom.', 'success');
       })._sidebarMoveBouncedToBottom();
     }
 
-    function generateValidListNow() {
-      google.script.run.withSuccessHandler(function(res) {
-        showToast('Synchronized ' + res.count + ' valid contacts to "' + res.sheetName + '".', true);
+    function buildValidNow() {
+      google.script.run.withSuccessHandler(function(r) {
+        showToast('Clean contacts tab created: ' + r.sheetName, 'success');
       })._sidebarBuildValidList();
     }
 
     function refreshStatusesNow() {
       google.script.run.withSuccessHandler(function() {
-        showToast('Refreshed statuses from inbox.', true);
-        loadMetrics();
+        showToast('Refreshed statuses from inbox.', 'success');
       }).checkEmailStatuses();
-    }
-
-    function openVisualDashboardSheet() {
-      google.script.run._sidebarCreateDashboardSheet();
     }
 
     function loadMetrics() {
       if (typeof google === 'undefined' || !google.script) return;
       google.script.run.withSuccessHandler(function(m) {
-        document.getElementById('mTotal').textContent = m.total;
-        document.getElementById('mSent').textContent = m.sent;
-        document.getElementById('mOpened').textContent = m.opened;
-        document.getElementById('mPositive').textContent = m.positive;
-        document.getElementById('mBounced').textContent = (m.bounced + m.blocked + m.failed);
-        document.getElementById('mPending').textContent = m.pending;
+        document.getElementById('stTotal').textContent = m.total;
+        document.getElementById('stSent').textContent = m.sent;
+        document.getElementById('stOpened').textContent = m.opened;
+        document.getElementById('stPositive').textContent = m.positive;
+        document.getElementById('stBounced').textContent = (m.bounced + m.blocked + m.failed);
+        document.getElementById('stPending').textContent = m.pending;
       }).getSidebarMetrics();
-    }
-
-    function previewCurrentRow() {
-      const row = parseInt(document.getElementById('startRowInput').value) || 2;
-      const draftId = document.getElementById('draftSelect').value || null;
-      google.script.run.withSuccessHandler(function(res) {
-        alert('Subject: ' + res.subject + '\n\nPreview Content:\n' + res.body.substring(0, 300) + '...');
-      })._sidebarPreviewEmail(row, '', '', draftId);
     }
   </script>
 </body>

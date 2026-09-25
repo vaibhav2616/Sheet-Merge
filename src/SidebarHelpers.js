@@ -65,3 +65,16 @@ function _sidebarRemoveDailyTrigger() {
 function _sidebarGetDailyTriggerStatus() {
   return getDailyTriggerStatus();
 }
+
+function _sidebarStopMerge() {
+  return triggerStopMerge();
+}
+
+function _sidebarSendTestEmail(params) {
+  return sendTestEmail(params);
+}
+
+function _sidebarGetQuota() {
+  return getMergeQuota();
+}
+

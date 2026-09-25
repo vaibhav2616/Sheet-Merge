@@ -1,16 +1,9 @@
 {
-  "name": "sheetmerge-tests",
-  "version": "1.0.0",
-  "description": "Jest unit tests for SheetMerge Apps Script logic",
+  "name": "sheetmerge-addon",
+  "version": "2.2.0",
+  "description": "SheetMerge - Modern Mail Merge for Google Sheets",
   "private": true,
   "scripts": {
-    "test": "jest --testPathPattern=tests/",
-    "test:watch": "jest --watch --testPathPattern=tests/"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0"
-  },
-  "jest": {
-    "testEnvironment": "node"
+    "lint": "node --check src/*.js"
   }
 }

@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SheetMerge — Modern Mail Merge</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-elevated: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-focus: #6366f1;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-subtle: #94a3b8;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --primary-glow: rgba(79, 70, 229, 0.25);
+      --success: #10b981;
+      --success-subtle: #ecfdf5;
+      --success-border: #a7f3d0;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --danger-subtle: #fef2f2;
+      --danger-border: #fecaca;
+      --warning: #f59e0b;
+      --warning-subtle: #fffbeb;
+      --radius-sm: 6px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+      --shadow-glow: 0 0 20px var(--primary-glow);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-elevated: #1f2937;
+      --surface-subtle: #1e293b;
+      --border: #2d3748;
+      --border-focus: #818cf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --success: #34d399;
+      --success-subtle: rgba(16, 185, 129, 0.12);
+      --success-border: rgba(16, 185, 129, 0.3);
+      --danger: #f87171;
+      --danger-hover: #ef4444;
+      --danger-subtle: rgba(239, 68, 68, 0.12);
+      --danger-border: rgba(239, 68, 68, 0.3);
+      --warning: #fbbf24;
+      --warning-subtle: rgba(245, 158, 11, 0.12);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
+      --shadow-lg: 0 12px 28px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      user-select: none;
+      transition: background-color 0.25s, color 0.25s;
+    }
+
+    /* Container */
+    .app-shell {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 16px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 100vh;
+    }
+
+    /* Header Bar */
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon-wrap {
+      width: 36px;
+      height: 36px;
+      background: var(--primary-gradient);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 4px 10px var(--primary-glow);
+    }
+    .brand-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .brand-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      background: var(--primary-glow);
+      color: var(--primary);
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quota-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .quota-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+    }
+    .theme-btn {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+    .theme-btn:hover {
+      background: var(--border);
+      transform: scale(1.05);
+    }
+
+    /* Tab switcher for Views */
+    .view-switcher {
+      display: flex;
+      background: var(--surface-subtle);
+      padding: 3px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+    .switch-btn {
+      flex: 1;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .switch-btn:hover {
+      color: var(--text);
+    }
+    .switch-btn.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Views container */
+    .view-pane {
+      display: none;
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .view-pane.active {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-md);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-num {
+      width: 20px;
+      height: 20px;
+      background: var(--primary-glow);
+      color: var(--primary);
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Form Fields */
+    .field-group {
+      margin-bottom: 12px;
+    }
+    .field-group:last-child {
+      margin-bottom: 0;
+    }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .field-control {
+      width: 100%;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .field-control:focus {
+      background: var(--surface);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    select.field-control {
+      cursor: pointer;
+    }
+
+    /* Draft Tags preview */
+    .tag-chips-wrap {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--surface-subtle);
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+    }
+    .tag-chips-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .chip.matched {
+      background: var(--success-subtle);
+      border-color: var(--success-border);
+      color: var(--success);
+    }
+    .chip.missing {
+      background: var(--danger-subtle);
+      border-color: var(--danger-border);
+      color: var(--danger);
+    }
+
+    /* Grid splits */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Anti-Spam Options Box */
+    .deliverability-card {
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-subtle) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .toggle-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .toggle-info h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .toggle-info p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .switch-toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+    }
+    .switch-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--border);
+      transition: .2s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
+
+    /* Bottom Action Dock */
+    .action-dock {
+      margin-top: 6px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: inherit;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-secondary {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-focus);
+    }
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      box-shadow: 0 4px 14px var(--primary-glow);
+      flex: 1;
+    }
+    .btn-primary:hover {
+      opacity: 0.95;
+      box-shadow: 0 6px 20px var(--primary-glow);
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: var(--danger);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover {
+      background: var(--danger-hover);
+    }
+
+    /* ── Live Dispatch HUD View (Stage 2) ── */
+    .hud-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .hud-box::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--primary-gradient);
+    }
+
+    /* Circular SVG Gauge */
+    .gauge-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      margin: 10px 0 16px;
+    }
+    .gauge-svg {
+      transform: rotate(-90deg);
+      width: 140px;
+      height: 140px;
+    }
+    .gauge-track {
+      fill: none;
+      stroke: var(--surface-subtle);
+      stroke-width: 10;
+    }
+    .gauge-fill {
+      fill: none;
+      stroke: url(#gaugeGradient);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 377;
+      stroke-dashoffset: 377;
+      transition: stroke-dashoffset 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .gauge-center-text {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .gauge-percent {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    .gauge-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* HUD Stats Row */
+    .hud-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      margin: 14px 0 16px;
+    }
+    .hud-stat-cell {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 6px;
+    }
+    .hud-stat-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .hud-stat-desc {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Live Recipient Ticker */
+    .ticker-bar {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      font-size: 12px;
+    }
+    .beacon-dot {
+      width: 9px;
+      height: 9px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse 1.6s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .ticker-text {
+      flex: 1;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    /* Prominent Animated STOP BUTTON */
+    .stop-btn-wrap {
+      width: 100%;
+    }
+    .btn-stop {
+      width: 100%;
+      background: var(--danger-subtle);
+      border: 1.5px solid var(--danger);
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.18s;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+    }
+    .btn-stop:hover {
+      background: var(--danger);
+      color: #ffffff;
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn-stop:active {
+      transform: scale(0.98);
+    }
+
+    /* ── Completion Celebration View (Stage 3) ── */
+    .celebration-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+    }
+    .celeb-icon {
+      font-size: 46px;
+      margin-bottom: 12px;
+      display: inline-block;
+      animation: bounce 0.6s ease;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .celeb-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .celeb-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Notification / Toast Banner */
+    .banner {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.2s ease;
+    }
+    .banner.show {
+      display: flex;
+    }
+    .banner-info {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .banner-success {
+      background: var(--success-subtle);
+      border: 1px solid var(--success-border);
+      color: var(--success);
+    }
+    .banner-danger {
+      background: var(--danger-subtle);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SVG Linear Gradient for Gauge -->
+  <svg style="position:absolute; width:0; height:0;">
+    <defs>
+      <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#4f46e5" />
+        <stop offset="100%" stop-color="#10b981" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="app-shell">
+
+    <!-- Header Bar -->
+    <header class="header-bar">
+      <div class="brand-group">
+        <div class="brand-icon-wrap">✉️</div>
+        <div>
+          <div class="brand-name">
+            SheetMerge
+            <span class="brand-tag">YAMM Speed</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="quota-pill">
+          <span class="quota-indicator"></span>
+          <span id="quotaText">Checking quota...</span>
+        </div>
+        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+      </div>
+    </header>
+
+    <!-- Top View Switcher -->
+    <nav class="view-switcher" id="mainTabs">
+      <button class="switch-btn active" id="tabMerge" onclick="showPane('compose')">
+        <span>🚀</span> Start Merge
+      </button>
+      <button class="switch-btn" id="tabAutomation" onclick="showPane('automation')">
+        <span>⏰</span> Daily 50 Auto
+      </button>
+      <button class="switch-btn" id="tabAnalytics" onclick="showPane('analytics')">
+        <span>📊</span> Insights
+      </button>
+    </nav>
+
+    <!-- Global Toast Alert Banner -->
+    <div id="alertBanner" class="banner">
+      <span id="bannerIcon">ℹ️</span>
+      <span id="bannerText" style="flex:1;"></span>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- STAGE 1: COMPOSE & LAUNCH PANE (NON-STACKED, FOCUSED)        -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <main id="paneCompose" class="view-pane active">
+
+      <!-- Step 1: Gmail Draft Selector -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-num">1</span>
+            Select Gmail Draft Template
+          </div>
+          <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="fetchDrafts()">
+            🔄 Refresh
+          </button>
+        </div>
+
+        <div class="field-group">
+          <select id="draftSelect" class="field-control" onchange="onDraftChange()">
+            <option value="">-- Choose a Gmail Draft (recommended) --</option>
+          </select>
+        </div>
+
+        <!-- Dynamic Merge Tags Preview Card -->
+        <div id="tagsPreviewBox" class="tag-chips-wrap" style="display:none;">
+          <div class="tag-chips-title">
+            <span>Detected Merge Tags in Draft:</span>
+            <span id="tagMatchBadge" style="font-size:10px; font-weight:700;"></span>
+          </div>
+          <div class="chips-row" id="chipsContainer"></div>
+        </div>
+      </section>
+
+      <!-- Step 2: Sender & Audience Setup -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-num">2</span>
+            Audience & Sender Configuration
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field-group">
+            <label class="field-label" for="emailColSelect">Recipient Email Column</label>
+            <select id="emailColSelect" class="field-control"></select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="senderNameInput">Sender Name</label>
+            <input type="text" id="senderNameInput" class="field-control" placeholder="e.g. Sarah from SheetMerge">
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:10px;">
+          <div class="field-group">
+            <label class="field-label" for="dailyLimitInput">Send Batch Limit</label>
+            <input type="number" id="dailyLimitInput" class="field-control" min="1" max="100" value="50">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="startRowInput">Start Row</label>
+            <input type="number" id="startRowInput" class="field-control" min="2" value="2">
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Anti-Spam Humanization Parameters (Clean & Compact) -->
+      <section class="deliverability-card">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Human Timing Jitter (15s ± 35%)</h4>
+            <p>Varies delivery intervals dynamically to emulate manual sending and avoid spam filters.</p>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="jitterToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Auto-Clean Bounced & Blocked Leads</h4>
+            <p>Automatically isolates bounced emails to protect sender score on future runs.</p>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="moveBouncedToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Persistent Action Dock -->
+      <div class="action-dock">
+        <button class="btn btn-secondary" onclick="sendTestEmailToMe()" title="Send row 2 preview to your Gmail inbox">
+          ✉️ Send Test Email to Me
+        </button>
+        <button class="btn btn-primary" id="startMergeBtn" onclick="initiateMailMerge()">
+          🚀 Send 50 Emails Now
+        </button>
+      </div>
+
+    </main>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- STAGE 2: LIVE DISPATCH HUD (ANIMATED & INTERACTIVE)          -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <main id="paneDispatchHUD" class="view-pane">
+      <div class="hud-box">
+
+        <h3 style="font-size:16px; font-weight:700; color:var(--text);">
+          Live Dispatch in Progress
+        </h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+          SheetMerge engine is delivering your personalized emails sequentially.
+        </p>
+
+        <!-- Circular Animated Gauge -->
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 140 140">
+            <circle class="gauge-track" cx="70" cy="70" r="60"></circle>
+            <circle class="gauge-fill" id="hudGaugeCircle" cx="70" cy="70" r="60"></circle>
+          </svg>
+          <div class="gauge-center-text">
+            <span class="gauge-percent" id="hudGaugePercent">0%</span>
+            <span class="gauge-label" id="hudGaugeRatio">0 / 50</span>
+          </div>
+        </div>
+
+        <!-- Live Metrics Grid -->
+        <div class="hud-stats-grid">
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="hudSent" style="color:var(--success);">0</div>
+            <div class="hud-stat-desc">Delivered</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="hudRemaining">50</div>
+            <div class="hud-stat-desc">Remaining</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="hudSkipped" style="color:var(--text-muted);">0</div>
+            <div class="hud-stat-desc">Skipped</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="hudFailed" style="color:var(--danger);">0</div>
+            <div class="hud-stat-desc">Failed</div>
+          </div>
+        </div>
+
+        <!-- Live Recipient Ticker -->
+        <div class="ticker-bar">
+          <span class="beacon-dot"></span>
+          <span class="ticker-text" id="hudTicker">Connecting to Google Gmail engine...</span>
+        </div>
+
+        <!-- 🛑 THE CRITICAL USER STOP BUTTON -->
+        <div class="stop-btn-wrap">
+          <button class="btn-stop" id="stopMergeBtn" onclick="stopMailMergeNow()">
+            🛑 Stop Mail Merge
+          </button>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- STAGE 3: COMPLETION CELEBRATION PANE                         -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <main id="paneCelebration" class="view-pane">
+      <div class="celebration-box">
+        <div class="celeb-icon" id="celebIcon">🎉</div>
+        <h2 class="celeb-title" id="celebTitle">Mail Merge Complete!</h2>
+        <p class="celeb-desc" id="celebSummary">
+          Your emails have been delivered successfully. The "Merge Status" column in your sheet has been updated with verified timestamps.
+        </p>
+
+        <div class="hud-stats-grid" style="max-width:380px; margin:0 auto 20px;">
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="finalSent" style="color:var(--success);">0</div>
+            <div class="hud-stat-desc">Sent</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="finalSkipped">0</div>
+            <div class="hud-stat-desc">Skipped</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="finalFailed">0</div>
+            <div class="hud-stat-desc">Bounced</div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:10px;">
+          <button class="btn btn-secondary" onclick="showPane('compose')">
+            ← Send Another Batch
+          </button>
+          <button class="btn btn-primary" onclick="google.script.host.close()">
+            ✓ Done & View Sheet
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: AUTOMATION & SCHEDULING                               -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <main id="paneAutomation" class="view-pane">
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">⏰ Daily Automated 50-Send Trigger</div>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">
+          Automatically deliver 50 valid emails every day at your chosen time. The engine automatically resumes from the last unmerged row and safely isolates any hard bounces.
+        </p>
+
+        <div class="field-group">
+          <label class="field-label" for="dailyHourSelect">Daily Dispatch Hour</label>
+          <select id="dailyHourSelect" class="field-control">
+            <option value="8">08:00 AM</option>
+            <option value="9" selected>09:00 AM (Recommended)</option>
+            <option value="10">10:00 AM</option>
+            <option value="14">02:00 PM</option>
+            <option value="16">04:00 PM</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="btn btn-primary" onclick="setupDailyTrigger()">⚡ Enable Daily 50-Send Schedule</button>
+          <button class="btn btn-secondary" onclick="disableDailyTrigger()">Disable</button>
+        </div>
+
+        <div id="triggerStatusBox" style="margin-top:14px; padding:10px; background:var(--surface-subtle); border-radius:8px; font-size:12px;">
+          Checking trigger status...
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">✨ 1-Click Sheet Maintenance</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="btn btn-secondary" onclick="moveBouncedNow()">🔻 Move Bounced Leads to Bottom</button>
+          <button class="btn btn-secondary" onclick="buildValidListNow()">✨ Build Clean Valid Contacts Sheet</button>
+          <button class="btn btn-secondary" onclick="refreshInboxStatuses()">🔄 Refresh Statuses & Bounces from Inbox</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: ANALYTICS & INSIGHTS                                  -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <main id="paneAnalytics" class="view-pane">
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">📊 Campaign Delivery Breakdown</div>
+          <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="loadMetrics()">🔄 Refresh</button>
+        </div>
+
+        <div class="hud-stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="anTotal">0</div>
+            <div class="hud-stat-desc">Total Leads</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="anSent" style="color:var(--success);">0</div>
+            <div class="hud-stat-desc">Delivered</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="anPending">0</div>
+            <div class="hud-stat-desc">Pending</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="anOpened" style="color:var(--primary);">0</div>
+            <div class="hud-stat-desc">Opened</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="anPositive" style="color:#059669;">0</div>
+            <div class="hud-stat-desc">Positive Reply</div>
+          </div>
+          <div class="hud-stat-cell">
+            <div class="hud-stat-num" id="anBounced" style="color:var(--danger);">0</div>
+            <div class="hud-stat-desc">Bounced / Blocked</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary" style="width:100%;" onclick="google.script.run._sidebarCreateDashboardSheet()">
+            📈 Open Visual Dashboard Sheet Tab
+          </button>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    /* ── Global State ── */
+    let cachedDrafts = [];
+    let cachedColumns = [];
+    let isMergeActive = false;
+
+    /* ── Theme Switcher ── */
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('sm_theme', next);
+    }
+    (function initTheme() {
+      const saved = localStorage.getItem('sm_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+      document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+    })();
+
+    /* ── Navigation Switcher ── */
+    function showPane(paneId) {
+      document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
+
+      if (paneId === 'compose') {
+        document.getElementById('paneCompose').classList.add('active');
+        document.getElementById('tabMerge').classList.add('active');
+      } else if (paneId === 'dispatch') {
+        document.getElementById('paneDispatchHUD').classList.add('active');
+      } else if (paneId === 'celebration') {
+        document.getElementById('paneCelebration').classList.add('active');
+      } else if (paneId === 'automation') {
+        document.getElementById('paneAutomation').classList.add('active');
+        document.getElementById('tabAutomation').classList.add('active');
+        checkTriggerStatus();
+      } else if (paneId === 'analytics') {
+        document.getElementById('paneAnalytics').classList.add('active');
+        document.getElementById('tabAnalytics').classList.add('active');
+        loadMetrics();
+      }
+    }
+
+    /* ── Notification Banner ── */
+    function showNotification(msg, type = 'info') {
+      const banner = document.getElementById('alertBanner');
+      const text = document.getElementById('bannerText');
+      const icon = document.getElementById('bannerIcon');
+
+      banner.className = 'banner show banner-' + type;
+      text.textContent = msg;
+      icon.textContent = type === 'success' ? '✅' : (type === 'danger' ? '🛑' : 'ℹ️');
+
+      setTimeout(() => {
+        banner.className = 'banner';
+      }, 6000);
+    }
+
+    /* ── Initialization ── */
+    window.onload = function() {
+      loadQuota();
+      loadColumns();
+      fetchDrafts();
+      loadSavedConfig();
+    };
+
+    function loadQuota() {
+      if (typeof google === 'undefined' || !google.script) {
+        document.getElementById('quotaText').textContent = '100 sends remaining';
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(q) {
+          document.getElementById('quotaText').textContent = q.remainingQuota + ' sends left today';
+        })
+        ._sidebarGetQuota();
+    }
+
+    function loadColumns() {
+      if (typeof google === 'undefined' || !google.script) return;
+      google.script.run
+        .withSuccessHandler(function(cols) {
+          cachedColumns = cols || [];
+          const sel = document.getElementById('emailColSelect');
+          sel.innerHTML = '';
+          cols.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            if (c.toLowerCase().includes('email') || c.toLowerCase().includes('mail')) opt.selected = true;
+            sel.appendChild(opt);
+          });
+        })
+        .getDataColumns();
+    }
+
+    function fetchDrafts() {
+      if (typeof google === 'undefined' || !google.script) return;
+      google.script.run
+        .withSuccessHandler(function(drafts) {
+          cachedDrafts = drafts || [];
+          const sel = document.getElementById('draftSelect');
+          sel.innerHTML = '<option value="">-- Choose a Gmail Draft (recommended) --</option>';
+          drafts.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = (d.subject || '(No Subject)') + '  [' + (d.tags.length ? d.tags.length + ' tags' : 'plain') + ']';
+            sel.appendChild(opt);
+          });
+        })
+        ._sidebarGetGmailDrafts();
+    }
+
+    function loadSavedConfig() {
+      if (typeof google === 'undefined' || !google.script) return;
+      google.script.run
+        .withSuccessHandler(function(cfg) {
+          if (cfg.senderName) document.getElementById('senderNameInput').value = cfg.senderName;
+          if (cfg.dailyLimit) document.getElementById('dailyLimitInput').value = cfg.dailyLimit;
+          if (cfg.startRow) document.getElementById('startRowInput').value = cfg.startRow;
+        })
+        .getConfig();
+    }
+
+    /* ── Draft Change & Placeholders Matcher ── */
+    function onDraftChange() {
+      const draftId = document.getElementById('draftSelect').value;
+      const previewBox = document.getElementById('tagsPreviewBox');
+      const container = document.getElementById('chipsContainer');
+      const badge = document.getElementById('tagMatchBadge');
+
+      if (!draftId) {
+        previewBox.style.display = 'none';
+        return;
+      }
+
+      const draft = cachedDrafts.find(d => d.id === draftId);
+      if (!draft || !draft.tags || draft.tags.length === 0) {
+        previewBox.style.display = 'block';
+        container.innerHTML = '<span style="font-size:11px; color:var(--text-muted);">No {{placeholders}} found in this draft. Standard email will be sent.</span>';
+        badge.textContent = '';
+        return;
+      }
+
+      previewBox.style.display = 'block';
+      container.innerHTML = '';
+
+      const colsLower = cachedColumns.map(c => String(c).trim().toLowerCase());
+      let matchedCount = 0;
+
+      draft.tags.forEach(tag => {
+        const isMatched = colsLower.includes(tag.toLowerCase());
+        if (isMatched) matchedCount++;
+
+        const chip = document.createElement('span');
+        chip.className = 'chip ' + (isMatched ? 'matched' : 'missing');
+        chip.innerHTML = '{{' + tag + '}} ' + (isMatched ? '✓' : '✗ missing');
+        container.appendChild(chip);
+      });
+
+      if (matchedCount === draft.tags.length) {
+        badge.innerHTML = '<span style="color:var(--success);">✓ All ' + draft.tags.length + ' tags matched in sheet</span>';
+      } else {
+        badge.innerHTML = '<span style="color:var(--danger);">' + (draft.tags.length - matchedCount) + ' tag(s) missing from sheet</span>';
+      }
+    }
+
+    /* ── Send Test Email (Instant Verification) ── */
+    function sendTestEmailToMe() {
+      const draftId = document.getElementById('draftSelect').value || null;
+      const senderName = document.getElementById('senderNameInput').value || '';
+
+      showNotification('Sending personalized row 2 test email to your Gmail...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showNotification('✅ Test email sent to ' + res.recipient + '! Check your inbox.', 'success');
+        })
+        .withFailureHandler(function(err) {
+          showNotification('Error sending test: ' + err.message, 'danger');
+        })
+        ._sidebarSendTestEmail({ draftId: draftId, senderName: senderName });
+    }
+
+    /* ── Live Circular Gauge Controller ── */
+    function setGaugeProgress(percent) {
+      percent = Math.min(100, Math.max(0, percent));
+      const circle = document.getElementById('hudGaugeCircle');
+      const circum = 2 * Math.PI * 60; // ~377px
+      const offset = circum - (percent / 100) * circum;
+      circle.style.strokeDashoffset = offset;
+      document.getElementById('hudGaugePercent').textContent = Math.round(percent) + '%';
+    }
+
+    /* ── Start Mail Merge (Stage 2 Transition) ── */
+    function initiateMailMerge() {
+      const quotaVal = parseInt(document.getElementById('dailyLimitInput').value) || 50;
+      const params = {
+        draftId: document.getElementById('draftSelect').value || null,
+        emailColumn: document.getElementById('emailColSelect').value || 'Email',
+        senderName: document.getElementById('senderNameInput').value || '',
+        startRow: parseInt(document.getElementById('startRowInput').value) || 2,
+        dailyLimit: quotaVal,
+        sendDelay: 14,
+        randomJitter: document.getElementById('jitterToggle').checked,
+        autoMoveBouncedToBottom: document.getElementById('moveBouncedToggle').checked,
+        autoBuildValidList: true
+      };
+
+      isMergeActive = true;
+      showPane('dispatch');
+
+      // Initialize HUD UI
+      setGaugeProgress(0);
+      document.getElementById('hudGaugeRatio').textContent = '0 / ' + quotaVal;
+      document.getElementById('hudSent').textContent = '0';
+      document.getElementById('hudRemaining').textContent = quotaVal;
+      document.getElementById('hudSkipped').textContent = '0';
+      document.getElementById('hudFailed').textContent = '0';
+      document.getElementById('hudTicker').textContent = 'Connecting to Gmail engine and verifying contacts...';
+      document.getElementById('stopMergeBtn').disabled = false;
+      document.getElementById('stopMergeBtn').innerHTML = '🛑 Stop Mail Merge';
+
+      // Simulation animation for delightful micro-progress while Apps Script dispatches
+      let simulatedPercent = 0;
+      const progressTimer = setInterval(() => {
+        if (!isMergeActive || simulatedPercent >= 92) return;
+        simulatedPercent += Math.random() * 4;
+        setGaugeProgress(simulatedPercent);
+        document.getElementById('hudTicker').textContent = 'Delivering at human pace with jitter interval...';
+      }, 1400);
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          isMergeActive = false;
+          clearInterval(progressTimer);
+
+          setGaugeProgress(100);
+          document.getElementById('hudGaugeRatio').textContent = res.sent + ' / ' + quotaVal;
+          document.getElementById('hudSent').textContent = res.sent;
+
+          // Transition to Celebration Stage
+          setTimeout(() => {
+            showPane('celebration');
+            if (res.stopped) {
+              document.getElementById('celebIcon').textContent = '🛑';
+              document.getElementById('celebTitle').textContent = 'Mail Merge Stopped';
+              document.getElementById('celebSummary').textContent = 'Execution was cleanly halted by user. ' + res.sent + ' emails were delivered before stopping.';
+            } else {
+              document.getElementById('celebIcon').textContent = '🎉';
+              document.getElementById('celebTitle').textContent = 'Mail Merge Complete!';
+              document.getElementById('celebSummary').textContent = 'Successfully delivered ' + res.sent + ' emails. Bounces isolated, and single "Merge Status" column updated.';
+            }
+            document.getElementById('finalSent').textContent = res.sent;
+            document.getElementById('finalSkipped').textContent = res.skipped;
+            document.getElementById('finalFailed').textContent = res.failed;
+          }, 800);
+        })
+        .withFailureHandler(function(err) {
+          isMergeActive = false;
+          clearInterval(progressTimer);
+          showNotification('Dispatch error: ' + err.message, 'danger');
+          showPane('compose');
+        })
+        .runMailMerge(params);
+    }
+
+    /* ── STOP MAIL MERGE BUTTON HANDLER ── */
+    function stopMailMergeNow() {
+      const btn = document.getElementById('stopMergeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Halting dispatch immediately...';
+      document.getElementById('hudTicker').textContent = 'Sending stop signal to Apps Script engine...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showNotification('🛑 Stop signal received. SheetMerge is halting after the current email.', 'danger');
+        })
+        .stopSheetMerge();
+    }
+
+    /* ── Automation & Schedule ── */
+    function checkTriggerStatus() {
+      if (typeof google === 'undefined' || !google.script) return;
+      google.script.run
+        .withSuccessHandler(function(status) {
+          const box = document.getElementById('triggerStatusBox');
+          if (status.enabled) {
+            box.innerHTML = '<b style="color:var(--success);">● Active Schedule:</b> Configured to send 50 emails daily at ' + status.hour + ':00 AM.';
+          } else {
+            box.innerHTML = '<span style="color:var(--text-muted);">○ Inactive: No automated daily trigger configured.</span>';
+          }
+        })
+        ._sidebarGetDailyTriggerStatus();
+    }
+
+    function setupDailyTrigger() {
+      const hour = parseInt(document.getElementById('dailyHourSelect').value) || 9;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showNotification('Daily 50-send trigger active for ' + res.hour + ':00!', 'success');
+          checkTriggerStatus();
+        })
+        ._sidebarSetupDailyTrigger(hour);
+    }
+
+    function disableDailyTrigger() {
+      google.script.run
+        .withSuccessHandler(function() {
+          showNotification('Daily triggers removed.', 'info');
+          checkTriggerStatus();
+        })
+        ._sidebarRemoveDailyTrigger();
+    }
+
+    function moveBouncedNow() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showNotification('Moved ' + res.bouncedCount + ' bounced leads to the bottom.', 'success');
+        })
+        ._sidebarMoveBouncedToBottom();
+    }
+
+    function buildValidListNow() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showNotification('Clean contacts synchronized to tab: ' + res.sheetName, 'success');
+        })
+        ._sidebarBuildValidList();
+    }
+
+    function refreshInboxStatuses() {
+      google.script.run
+        .withSuccessHandler(function() {
+          showNotification('Inbox scanned for replies & bounces.', 'success');
+        })
+        .checkEmailStatuses();
+    }
+
+    /* ── Metrics ── */
+    function loadMetrics() {
+      if (typeof google === 'undefined' || !google.script) return;
+      google.script.run
+        .withSuccessHandler(function(m) {
+          document.getElementById('anTotal').textContent = m.total;
+          document.getElementById('anSent').textContent = m.sent;
+          document.getElementById('anPending').textContent = m.pending;
+          document.getElementById('anOpened').textContent = m.opened;
+          document.getElementById('anPositive').textContent = m.positive;
+          document.getElementById('anBounced').textContent = (m.bounced + m.blocked + m.failed);
+        })
+        .getSidebarMetrics();
+    }
+  </script>
+</body>
+</html>

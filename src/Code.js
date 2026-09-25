@@ -102,11 +102,19 @@ function isProcessedStatus(raw) {
  * Called automatically when the spreadsheet is opened.
  * Builds the SheetMerge menu.
  */
+/**
+ * Called automatically when the spreadsheet is opened.
+ * Builds the SheetMerge menu.
+ */
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('✉️ ' + ADDON_NAME)
-    .addItem('📧 Open Mail Merge Sidebar (v2)',          'showSidebar')
+    .addItem('🚀 Start Mail Merge (Modal Dialog)',        'showDialog')
+    .addItem('📑 Open Mail Merge (Sidebar)',             'showSidebar')
     .addSeparator()
+    .addItem('🛑 Stop In-Progress Mail Merge',          'stopSheetMerge')
+    .addSeparator()
+    .addItem('✉️ Send Test Email to Me',                 'sendQuickTestEmail')
     .addItem('⚡ Run Daily Batch Now (50 Valid Sends)',  'runDailyBatchNow')
     .addItem('⏰ Configure Automated Daily Sending',     'showSettings')
     .addSeparator()
@@ -147,12 +155,50 @@ function createTemplate(filename) {
   }
 }
 
+/**
+ * Launches the wide modal dialog (YAMM-style interactive experience).
+ */
+function showDialog() {
+  var html = createTemplate('Dialog')
+    .evaluate()
+    .setWidth(680)
+    .setHeight(620);
+  SpreadsheetApp.getUi().showModalDialog(html, '✉️ ' + ADDON_NAME + ' — Modern Mail Merge');
+}
+
+/**
+ * Launches the persistent side panel.
+ */
 function showSidebar() {
   var html = createTemplate('Sidebar')
     .evaluate()
     .setTitle('✉️ ' + ADDON_NAME + ' v' + VERSION)
-    .setWidth(400);
+    .setWidth(420);
   SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Stops any in-progress SheetMerge mail merge running inside Google Sheets.
+ * Accessible via UI button and menu item.
+ */
+function stopSheetMerge() {
+  return triggerStopMerge();
+}
+
+/**
+ * Sends a single test email of row 2 to verify draft placeholders and formatting.
+ */
+function sendQuickTestEmail() {
+  try {
+    var cfg = getConfig();
+    var res = sendTestEmail({
+      draftId: cfg.draftId || null,
+      senderName: cfg.senderName || ''
+    });
+    SpreadsheetApp.getActiveSpreadsheet().toast('Test email delivered to ' + res.recipient, '✅ Test Sent', 5);
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Could not send test email: ' + e.message);
+  }
 }
 
 function showDashboard() {

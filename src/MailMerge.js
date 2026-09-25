@@ -46,6 +46,66 @@ function injectClickTracking(body, trackId, backendUrl) {
   });
 }
 
+/* ── Stop Detection & Control ─────────────────────────────────── */
+
+/**
+ * Checks whether a stop signal has been triggered by the user via PropertiesService or CacheService.
+ * @return {boolean}
+ */
+function isStopRequested() {
+  try {
+    var p = PropertiesService.getUserProperties().getProperty('SHEETMERGE_STOP_REQUESTED');
+    if (p === 'true') return true;
+  } catch (e) {}
+  try {
+    var c = CacheService.getUserCache().get('SHEETMERGE_STOP_REQUESTED');
+    if (c === 'true') return true;
+  } catch (e2) {}
+  return false;
+}
+
+/**
+ * Resets the stop request flags.
+ */
+function clearStopFlag() {
+  try { PropertiesService.getUserProperties().deleteProperty('SHEETMERGE_STOP_REQUESTED'); } catch (e) {}
+  try { CacheService.getUserCache().remove('SHEETMERGE_STOP_REQUESTED'); } catch (e2) {}
+}
+
+/**
+ * Sets the stop request flag to halt any running mail merge loop immediately.
+ * @return {Object}
+ */
+function triggerStopMerge() {
+  try { PropertiesService.getUserProperties().setProperty('SHEETMERGE_STOP_REQUESTED', 'true'); } catch (e) {}
+  try { CacheService.getUserCache().put('SHEETMERGE_STOP_REQUESTED', 'true', 300); } catch (e2) {}
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Stop signal received. Mail merge will halt after the current email.', '🛑 Halting SheetMerge', 6);
+  } catch (e3) {}
+  return { success: true, message: 'Stop signal dispatched. SheetMerge execution will halt.' };
+}
+
+/**
+ * Sleeps for totalMs while checking for stop requests every 400ms.
+ * Returns true if the user triggered a stop during the delay.
+ *
+ * @param {number} totalMs
+ * @return {boolean}
+ */
+function sleepWithStopCheck(totalMs) {
+  var elapsed = 0;
+  var step = 400;
+  while (elapsed < totalMs) {
+    if (isStopRequested()) {
+      return true;
+    }
+    var chunk = Math.min(step, totalMs - elapsed);
+    Utilities.sleep(chunk);
+    elapsed += chunk;
+  }
+  return false;
+}
+
 /* ── Sending Loop ─────────────────────────────────────────────── */
 
 function runMailMerge(params) {
@@ -64,6 +124,8 @@ function runMailMerge(params) {
 }
 
 function _doMailMerge(params) {
+  clearStopFlag();
+
   var sheet  = getDataSheet();
   var colMap = ensureStatusColumns(sheet);
 
@@ -79,6 +141,7 @@ function _doMailMerge(params) {
     failed: 0,
     skipped: 0,
     duplicate: 0,
+    stopped: false,
     targetQuota: targetQuota,
     errors: []
   };
@@ -114,6 +177,18 @@ function _doMailMerge(params) {
   var successfulSends = 0;
 
   for (var i = 0; i < allRows.length; i++) {
+    // Check if user requested to stop the merge
+    if (isStopRequested()) {
+      Logger.log('Mail merge stop requested by user. Aborting dispatch.');
+      clearStopFlag();
+      result.stopped = true;
+      result.errors.push('Mail merge was stopped by the user after ' + successfulSends + ' successful sends.');
+      try {
+        SpreadsheetApp.getActiveSpreadsheet().toast('Mail merge stopped by user. ' + successfulSends + ' emails delivered.', '🛑 SheetMerge Halted', 6);
+      } catch (eToast) {}
+      break;
+    }
+
     // Check if target successful quota is reached
     if (successfulSends >= targetQuota) {
       break;
@@ -199,14 +274,26 @@ function _doMailMerge(params) {
       // Save state
       saveConfig({ lastSentRow: row.rowIndex });
 
-      // Anti-spam jitter delay: randomized human pace
+      // Anti-spam jitter delay with responsive stop interrupt
       var waitMs = baseDelaySec * 1000;
       if (useJitter) {
         // Add +/- 35% randomized jitter
         var jitter = (Math.random() * 0.7 - 0.35) * waitMs;
-        waitMs = Math.max(5000, Math.floor(waitMs + jitter));
+        waitMs = Math.max(4000, Math.floor(waitMs + jitter));
       }
-      Utilities.sleep(waitMs);
+
+      // Responsive sleep checking for stop signal every 400ms
+      var stoppedDuringWait = sleepWithStopCheck(waitMs);
+      if (stoppedDuringWait) {
+        Logger.log('Stop signal received during delay. Aborting dispatch.');
+        clearStopFlag();
+        result.stopped = true;
+        result.errors.push('Mail merge stopped by user during delay after row ' + row.rowIndex);
+        try {
+          SpreadsheetApp.getActiveSpreadsheet().toast('Mail merge stopped by user. ' + successfulSends + ' emails delivered.', '🛑 SheetMerge Halted', 6);
+        } catch (eToast2) {}
+        break;
+      }
 
     } catch (err) {
       var errMsg = err.message || String(err);
@@ -229,12 +316,11 @@ function _doMailMerge(params) {
 
       result.failed++;
       result.errors.push('Row ' + row.rowIndex + ' (' + email + '): ' + errMsg);
-      // Hard bounce or error encountered: engine stops hammering this address and continues to next lead
     }
   }
 
-  // 3. Post-run organization
-  if (params.autoMoveBouncedToBottom !== false) {
+  // 3. Post-run organization (only if not abruptly stopped or if partial cleanup requested)
+  if (!result.stopped && params.autoMoveBouncedToBottom !== false) {
     try {
       moveBouncedAndBlockedToBottom(sheet);
     } catch (e) {
@@ -242,7 +328,7 @@ function _doMailMerge(params) {
     }
   }
 
-  if (params.autoBuildValidList !== false) {
+  if (!result.stopped && params.autoBuildValidList !== false) {
     try {
       buildValidContactsSheet(sheet);
     } catch (e) {
@@ -420,3 +506,85 @@ function previewEmail(previewRow, subjectTpl, bodyTpl, draftId) {
     body   : renderTemplate(bodyTpl    || '', rowData)
   };
 }
+
+/**
+ * Sends a single test email of row 2 directly to the active user's own inbox.
+ * Allows instant verification of tags, formatting, and attachments without altering the sheet.
+ *
+ * @param {Object} params
+ * @return {Object}
+ */
+function sendTestEmail(params) {
+  params = params || {};
+  var userEmail = Session.getActiveUser().getEmail();
+  if (!userEmail) {
+    throw new Error('Could not identify active user email. Please ensure your Google account is signed in.');
+  }
+
+  var sheet = getDataSheet();
+  var allRows = getDataRows(sheet, 2);
+  if (!allRows || allRows.length === 0) {
+    throw new Error('Your sheet contains no contact data rows to preview tags with.');
+  }
+
+  var sampleRow = allRows[0].data;
+  var subject = params.subjectTemplate || '';
+  var body = params.bodyTemplate || '';
+  var attachments = [];
+
+  if (params.draftId) {
+    try {
+      var draft = GmailApp.getDraft(params.draftId);
+      if (draft) {
+        var msg = draft.getMessage();
+        subject = msg.getSubject() || '';
+        body = msg.getBody() || '';
+        attachments = msg.getAttachments() || [];
+      }
+    } catch (e) {
+      Logger.log('Test email draft fetch note: ' + e.message);
+    }
+  }
+
+  var renderedSubject = '[TEST] ' + renderTemplate(subject, sampleRow);
+  var renderedBody = renderTemplate(body, sampleRow);
+
+  var mailOptions = {
+    htmlBody: renderedBody,
+    name: params.senderName ? (params.senderName + ' (Test)') : 'SheetMerge Test',
+    attachments: attachments
+  };
+
+  GmailApp.sendEmail(userEmail, renderedSubject, renderedBody, mailOptions);
+
+  return {
+    success: true,
+    recipient: userEmail,
+    subject: renderedSubject,
+    message: 'Test email delivered to ' + userEmail
+  };
+}
+
+/**
+ * Returns current user account info and remaining daily Gmail quota.
+ *
+ * @return {Object}
+ */
+function getMergeQuota() {
+  var remaining = 100;
+  try {
+    remaining = MailApp.getRemainingDailyQuota();
+  } catch (e) {}
+
+  var userEmail = '';
+  try {
+    userEmail = Session.getActiveUser().getEmail();
+  } catch (e2) {}
+
+  return {
+    userEmail: userEmail,
+    remainingQuota: remaining,
+    maxQuota: 100 // Consumer Gmail 100, Google Workspace 1500
+  };
+}
+
