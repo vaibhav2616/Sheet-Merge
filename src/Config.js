@@ -7,7 +7,7 @@
 
 var DEFAULTS = {
   emailColumn           : 'Email',       // Header name for recipient email
-  trackingBackendUrl    : 'http://localhost:8000', // FastAPI server
+  trackingBackendUrl    : '',            // Optional tracking endpoint (Apps Script Web App or custom URL)
   sendDelay             : 15,            // Natural seconds between sends (12-30s recommended)
   randomJitter          : true,          // Add +/- 35% random timing jitter to prevent spam pattern
   dailyLimit            : 50,            // Daily target for successful sends

@@ -30,7 +30,9 @@ function renderTemplate(template, rowData) {
 
 function injectTrackingPixel(body, trackId, backendUrl) {
   if (!backendUrl) return body;
-  var pixelUrl = backendUrl.replace(/\/$/, '') + '/track/open/' + encodeURIComponent(trackId);
+  var pixelUrl = backendUrl.indexOf('script.google.com') !== -1
+    ? backendUrl + (backendUrl.indexOf('?') === -1 ? '?' : '&') + 'route=open&id=' + encodeURIComponent(trackId)
+    : backendUrl.replace(/\/$/, '') + '/track/open/' + encodeURIComponent(trackId);
   var pixel = '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none" />';
   if (body.toLowerCase().indexOf('</body>') !== -1) {
     return body.replace(/<\/body>/i, pixel + '</body>');
@@ -40,9 +42,12 @@ function injectTrackingPixel(body, trackId, backendUrl) {
 
 function injectClickTracking(body, trackId, backendUrl) {
   if (!backendUrl) return body;
-  var base = backendUrl.replace(/\/$/, '') + '/track/click/' + encodeURIComponent(trackId) + '?url=';
+  var isScriptUrl = backendUrl.indexOf('script.google.com') !== -1;
   return body.replace(/href="(https?:\/\/[^"]+)"/gi, function(_, url) {
-    return 'href="' + base + encodeURIComponent(url) + '"';
+    var redirectUrl = isScriptUrl
+      ? backendUrl + (backendUrl.indexOf('?') === -1 ? '?' : '&') + 'route=click&id=' + encodeURIComponent(trackId) + '&url=' + encodeURIComponent(url)
+      : backendUrl.replace(/\/$/, '') + '/track/click/' + encodeURIComponent(trackId) + '?url=' + encodeURIComponent(url);
+    return 'href="' + redirectUrl + '"';
   });
 }
 

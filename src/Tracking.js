@@ -4,9 +4,8 @@
  * Deploy this Apps Script project as a Web App (Execute as: Me,
  * Access: Anyone) to receive pixel loads and link clicks.
  *
- * The Web App forwards events to the local FastAPI backend, but ALSO
- * writes directly to a _MM_Tracking sheet as a fallback (for when the
- * Python backend is not running).
+ * The Web App writes tracking events directly to the _MM_Tracking sheet
+ * and updates contact rows in the active spreadsheet.
  *
  * Endpoints:
  *   GET /exec?route=open&id=TRACK_ID

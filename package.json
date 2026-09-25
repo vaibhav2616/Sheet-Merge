@@ -4,7 +4,7 @@
   "description": "SheetMerge - Modern Mail Merge for Google Sheets",
   "private": true,
   "scripts": {
-    "lint": "node --check src/*.js"
+    "lint": "node -e \"const fs=require('fs'),cp=require('child_process');fs.readdirSync('src').filter(f=>f.endsWith('.js')).forEach(f=>cp.execSync('node --check src/'+f,{stdio:'inherit'}));console.log('All Apps Script JS files passed syntax validation.');\""
   },
   "devDependencies": {
     "@google/clasp": "^3.4.1"

@@ -1,149 +1,89 @@
-﻿#!/usr/bin/env pwsh
+#!/usr/bin/env pwsh
 # create_github_issues.ps1
-# Creates tracked GitHub issues for the SheetMerge project.
+# Creates tracked GitHub issues for the SheetMerge project (Google Sheets Add-on).
 # Requires: GitHub CLI (gh) to be installed and authenticated.
 # Usage: .\create_github_issues.ps1
-# Each issue can then be resolved via a PR that references it with "Closes #N"
 
 $REPO = "vaibhav2616/Sheet-Merge"
 
 $issues = @(
     @{
-        title  = "[BUG] checkEmailStatuses() crashes in automated time-driven triggers (UI context unavailable)"
-        body   = @"
-## Bug Description
-``checkEmailStatuses()`` in ``src/MailMerge.js`` calls ``SpreadsheetApp.getUi().alert()`` unconditionally. When this function is invoked from a time-driven trigger (via ``dailyAutomatedMerge``), there is no UI context available and Apps Script throws an exception, halting the entire automation run.
-
-## Root Cause
-``SpreadsheetApp.getUi()`` is not available in headless / server-side contexts (time-driven triggers, ``onEdit``, etc.).
-
-## Fix Required
-Wrap the ``.alert()`` call in a ``try/catch`` so the function logs the result to ``Logger`` instead of crashing when there is no UI context.
-
-## Labels: ``bug``, ``automation``, ``good first issue``
-"@
-        labels = "bug,automation,good first issue"
-    },
-    @{
-        title  = "[BUG] record_send_event SQL INSERT missing account_id column — schema mismatch causes IntegrityError"
-        body   = @"
-## Bug Description
-The ``INSERT OR REPLACE`` query in ``/api/history/record`` (``backend/main.py``) was missing the ``account_id`` column in its column list. The ``send_history`` table schema includes ``account_id``, but the INSERT statement only provided 6 values for 7 defined columns (excluding ``id``), causing implicit column mismatch and potential ``sqlite3.IntegrityError`` when ``account_email`` is supplied.
-
-## Fix Required
-Add ``account_id`` to the INSERT column list and resolve the account ID from ``accounts`` table before the insert.
-
-## Labels: ``bug``, ``backend``
-"@
-        labels = "bug,backend"
-    },
-    @{
-        title  = "[BUG] socket.setdefaulttimeout() mutates global state in domain_security.py and spam_analyzer.py"
-        body   = @"
-## Bug Description
-Both ``domain_security.py`` and ``spam_analyzer.py`` call ``socket.setdefaulttimeout(N)`` without saving and restoring the original value. This permanently modifies the global socket timeout for the entire Python process, which can affect unrelated HTTP/SMTP connections running concurrently (e.g. FastAPI route handlers).
-
-## Fix Required
-Save the original timeout via ``socket.getdefaulttimeout()`` before setting it, then restore it in a ``finally`` block.
-
-## Labels: ``bug``, ``backend``, ``concurrency``
-"@
-        labels = "bug,backend,concurrency"
-    },
-    @{
-        title  = "[BUG] Code.js contains placeholder repo URLs (yourusername/sheetmerge) in showHelp()"
-        body   = @"
-## Bug Description
-The ``showHelp()`` function in ``src/Code.js`` contains two links pointing to ``https://github.com/yourusername/sheetmerge`` (the placeholder from the project template). These are dead links that break the in-app help dialog for end users.
-
-## Fix Required
-Replace all occurrences of ``yourusername/sheetmerge`` with ``vaibhav2616/Sheet-Merge``.
-
-## Labels: ``bug``, ``good first issue``, ``documentation``
-"@
-        labels = "bug,good first issue,documentation"
-    },
-    @{
-        title  = "[BUG] smtp_relay.py imports unused asyncio module"
-        body   = @"
-## Bug Description
-``backend/smtp_relay.py`` imports ``asyncio`` at line 13, but this module is never used anywhere in the file. The file uses synchronous ``smtplib`` exclusively. The dead import adds confusion and could mislead contributors into thinking async patterns are used.
-
-## Fix Required
-Remove ``import asyncio`` from ``smtp_relay.py``.
-
-## Labels: ``bug``, ``cleanup``, ``good first issue``
-"@
-        labels = "bug,cleanup,good first issue"
-    },
-    @{
-        title  = "[FEAT] Add per-account daily quota reset cron to backend"
+        title  = "[FEAT] Support fallback tags in draft placeholders (e.g., {{First Name | friend}})"
         body   = @"
 ## Feature Request
-The ``accounts`` table tracks ``sent_today`` but there is no mechanism to automatically reset it to ``0`` each day. This means the ``/api/accounts/next-active`` endpoint will eventually return ``available: False`` for all accounts and never recover without manual intervention.
+When a recipient row has an empty contact column (such as ``First Name``), the greeting rendered currently results in an awkward blank space (e.g. ``Hi ,``).
 
 ## Proposed Implementation
-Add a background task (APScheduler or a FastAPI startup background loop) that resets ``sent_today = 0`` for all accounts once per day at midnight UTC, and updates ``last_reset``.
+Support fallback filter syntax like ``{{First Name | friend}}`` or ``{{Company | your team}}``. If the row value is empty or undefined, render the default fallback string.
 
-## Labels: ``enhancement``, ``backend``
+## Labels: ``enhancement``, ``templates``, ``ux``
 "@
-        labels = "enhancement,backend"
+        labels = "enhancement,templates,ux"
     },
     @{
-        title  = "[FEAT] Add pytest GitHub Actions CI workflow for backend tests"
+        title  = "[FEAT] Multi-row in-dialog preview carousel before launch"
         body   = @"
 ## Feature Request
-The project now has a backend test suite (``backend/tests/test_smtp_relay.py``, ``test_spam_analyzer.py``, ``test_domain_security.py``, ``test_main_api.py``) but there is no CI workflow that runs these tests automatically on every push/PR.
+Users want to preview what their email will look like across multiple rows (e.g. rows 2, 3, 4) directly inside the modal dialog before launching.
 
 ## Proposed Implementation
-Add a ``.github/workflows/backend-tests.yml`` GitHub Actions workflow that:
-1. Installs Python 3.11+
-2. Installs dependencies from ``backend/requirements.txt`` plus ``pytest httpx``
-3. Runs ``pytest backend/tests/ -v``
-4. Reports failures as PR checks
+Add a preview carousel in ``html/Dialog.html`` with Next/Previous row buttons that dynamically renders the subject and body for each contact row.
 
-## Labels: ``enhancement``, ``ci``, ``good first issue``
+## Labels: ``enhancement``, ``ui``, ``preview``
 "@
-        labels = "enhancement,ci,good first issue"
+        labels = "enhancement,ui,preview"
     },
     @{
-        title  = "[FEAT] Add Jest CI workflow for Apps Script unit tests"
+        title  = "[FEAT] Gmail alias sender selector (GmailApp.getAliases)"
         body   = @"
 ## Feature Request
-Add a GitHub Actions workflow that runs ``npx jest tests/SheetMerge.test.js`` on every push and PR to the ``main`` branch. This ensures the pure-logic JS functions (template rendering, email validation, duplicate detection, tracking injection) stay correct as the codebase evolves.
+Users with configured Google Workspace email aliases want to select which authorized email address to send from.
 
 ## Proposed Implementation
-Add ``.github/workflows/js-tests.yml`` that:
-1. Uses ``node`` 20+
-2. Runs ``npm install`` (installs Jest from ``package.json``)
-3. Runs ``npm test``
+Use ``GmailApp.getAliases()`` to populate an alias dropdown selector in ``html/Dialog.html`` and pass the chosen ``from`` address in the ``GmailApp.sendEmail`` options.
 
-## Labels: ``enhancement``, ``ci``, ``good first issue``
+## Labels: ``enhancement``, ``gmail``
 "@
-        labels = "enhancement,ci,good first issue"
+        labels = "enhancement,gmail"
     },
     @{
-        title  = "[FEAT] Standalone web app — public-facing hosted deployment (Phase 1 planning)"
+        title  = "[FEAT] Self-chaining time-based trigger for campaigns exceeding 4.5 minutes"
         body   = @"
 ## Feature Request
-The project is ready to move from a Google Sheets add-on toward a standalone public-facing web application that can be used without installing anything in Google Sheets.
+Google Apps Script terminates scripts after 6 minutes (360 seconds). For large contact lists with anti-spam jitter, campaigns can hit this limit.
 
-## Scope
-- FastAPI backend deployable to Vercel / Render / Railway (free tier)
-- React or plain-HTML frontend with the same sidebar UI
-- OAuth2 integration (Google Sign-in) to access Gmail drafts
-- Hosted tracking pixel endpoint with persistent SQLite or Postgres
-- Public URL that anyone can use
+## Proposed Implementation
+Track elapsed execution time; when reaching 270 seconds (4.5 minutes), save state to ``PropertiesService``, schedule a self-chaining time-based trigger with ``ScriptApp.newTrigger()``, and exit cleanly to resume seamlessly.
 
-## Acceptance Criteria
-- [ ] Backend deployed to a public URL
-- [ ] Frontend accessible via browser (no Google Sheets required)
-- [ ] Google OAuth flow working for Gmail draft access
-- [ ] All existing features (bounce detection, quota management, multi-account) functional
-
-## Labels: ``enhancement``, ``roadmap``
+## Labels: ``enhancement``, ``deliverability``, ``automation``
 "@
-        labels = "enhancement,roadmap"
+        labels = "enhancement,deliverability,automation"
+    },
+    @{
+        title  = "[FEAT] Support CC and BCC recipient columns"
+        body   = @"
+## Feature Request
+Users need the ability to include CC and BCC recipients on a per-contact basis.
+
+## Proposed Implementation
+Detect optional ``Cc`` and ``Bcc`` header columns from the active sheet and pass them into ``GmailApp.sendEmail`` options.
+
+## Labels: ``enhancement``, ``sheets``
+"@
+        labels = "enhancement,sheets"
+    },
+    @{
+        title  = "[FEAT] 1-click unsubscribe link & automatic suppression list"
+        body   = @"
+## Feature Request
+To ensure high email deliverability and compliance with modern mail guidelines, campaigns should support an automated unsubscribe link.
+
+## Proposed Implementation
+Provide an optional ``{{Unsubscribe}}`` placeholder that appends an unsubscribe link, and log opt-outs to an internal suppression tab to skip those contacts in future merges.
+
+## Labels: ``enhancement``, ``deliverability``, ``compliance``
+"@
+        labels = "enhancement,deliverability,compliance"
     }
 )
 
