@@ -36,5 +36,9 @@ Desktop.ini
 *.swp
 *.swo
 
+# ── Node / Jest ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
 # ── Decisions doc (personal study notes) ─────────────────────
 decisions.md

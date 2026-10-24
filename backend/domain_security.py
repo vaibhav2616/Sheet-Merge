@@ -35,7 +35,8 @@ def check_domain_dns(domain: str, dkim_selector: str = "google") -> Dict[str, An
     }
 
     if not DNS_AVAILABLE:
-        # Fallback to standard socket for MX
+        # Fallback to standard socket for MX (save/restore global timeout to avoid state leaks)
+        _orig_timeout = socket.getdefaulttimeout()
         try:
             socket.setdefaulttimeout(10.0)
             addr = socket.gethostbyname(domain)
@@ -43,6 +44,8 @@ def check_domain_dns(domain: str, dkim_selector: str = "google") -> Dict[str, An
             results["mx"]["records"] = [addr]
         except Exception as e:
             results["recommendations"].append(f"Domain lookup failed: {str(e)}")
+        finally:
+            socket.setdefaulttimeout(_orig_timeout)
         results["recommendations"].append("Install dnspython for full SPF/DKIM/DMARC deep inspection.")
         return results
 

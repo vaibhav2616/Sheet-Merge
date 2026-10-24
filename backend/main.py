@@ -26,7 +26,7 @@ from urllib.parse import unquote
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, EmailStr
 
 from domain_security import check_domain_dns
@@ -36,8 +36,8 @@ from smtp_relay import SMTPRelayConfig, get_random_throttle_delay, send_via_smtp
 
 # ── Database Path & Transparent Pixel ─────────────────────────────────────
 
-DATA_DIR = Path(__file__).parent / "data"
-DB_PATH = DATA_DIR / "tracking_v2.db"
+DATA_DIR = Path(os.environ.get("SHEETMERGE_DATA_DIR", Path(__file__).parent / "data"))
+DB_PATH = Path(os.environ.get("SHEETMERGE_DB_PATH", DATA_DIR / "tracking_v2.db"))
 
 TRANSPARENT_GIF = base64.b64decode(
     "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
@@ -377,14 +377,25 @@ def get_next_available_account():
 def record_send_event(req: MergeRecordRequest):
     conn = get_db()
     now_str = datetime.now(timezone.utc).isoformat()
+
+    # Resolve account_id if an account_email was provided
+    account_id: Optional[int] = None
+    if req.account_email:
+        acct_row = conn.execute(
+            "SELECT id FROM accounts WHERE email = ?", (req.account_email,)
+        ).fetchone()
+        if acct_row:
+            account_id = acct_row["id"]
+
     with conn:
         conn.execute(
             """
             INSERT OR REPLACE INTO send_history
-            (email, status, subject, track_id, row_index, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (email, account_id, status, subject, track_id, row_index, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (req.email.lower(), req.status, req.subject, req.track_id, req.row_index, now_str),
+            (req.email.lower(), account_id, req.status, req.subject,
+             req.track_id, req.row_index, now_str),
         )
         if req.account_email:
             conn.execute(
@@ -479,8 +490,12 @@ def get_status(track_id: str):
     }
 
 
+STATIC_INDEX = Path(__file__).parent / "static" / "index.html"
+
 @app.get("/", response_class=HTMLResponse)
 def index_docs():
+    if STATIC_INDEX.exists():
+        return FileResponse(STATIC_INDEX)
     return """
     <html>
       <head><title>SheetMerge V2 Enterprise Backend</title></head>

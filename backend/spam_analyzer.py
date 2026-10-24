@@ -68,11 +68,14 @@ def analyze_email_content(subject: str, body_html: str) -> Dict[str, Any]:
         penalty += 15
         warnings.append("Multiple exclamation marks or question marks in subject.")
 
-    # 2. Trigger keywords
+    # 2. Trigger keywords — use word-boundary matching to avoid false positives
+    #    e.g. "win" should not match "with", "window", "winning"
     combined_text = (subject + " " + plain_body).lower()
     found_triggers = []
     for phrase in SPAM_TRIGGER_WORDS:
-        if phrase in combined_text:
+        # Build a word-boundary-aware pattern for multi-word and single-word phrases
+        pattern = r"(?<![a-z])" + re.escape(phrase) + r"(?![a-z])"
+        if re.search(pattern, combined_text):
             found_triggers.append(phrase)
             penalty += 8
 
@@ -123,10 +126,13 @@ def verify_email_address(email: str, check_mx: bool = False) -> Dict[str, Any]:
         return {"valid": False, "reason": "Disposable / temporary email domain"}
 
     if check_mx:
+        _orig_timeout = socket.getdefaulttimeout()
         try:
             socket.setdefaulttimeout(4.0)
             socket.gethostbyname(domain)
         except Exception:
             return {"valid": False, "reason": f"Domain '{domain}' does not exist or lacks DNS"}
+        finally:
+            socket.setdefaulttimeout(_orig_timeout)
 
     return {"valid": True, "domain": domain}

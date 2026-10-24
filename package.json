@@ -1,0 +1,16 @@
+{
+  "name": "sheetmerge-tests",
+  "version": "1.0.0",
+  "description": "Jest unit tests for SheetMerge Apps Script logic",
+  "private": true,
+  "scripts": {
+    "test": "jest --testPathPattern=tests/",
+    "test:watch": "jest --watch --testPathPattern=tests/"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}

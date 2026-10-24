@@ -123,17 +123,9 @@ function _doMailMerge(params) {
     var rowData = row.data;
     var email   = String(rowData[emailCol] || '').trim();
 
-    // Check status already set on this row
+    // Check status already set on this row (compatible with YAMM and SheetMerge)
     var currentStatus = String(rowData[COL.STATUS] || '').trim();
-    if (
-      currentStatus === STATUS.SENT ||
-      currentStatus === STATUS.OPENED ||
-      currentStatus === STATUS.CLICKED ||
-      currentStatus === STATUS.REPLIED ||
-      currentStatus === STATUS.POSITIVE ||
-      currentStatus === STATUS.BOUNCED ||
-      currentStatus === STATUS.BLOCKED
-    ) {
+    if (isProcessedStatus(currentStatus)) {
       if (email) sentSet[email.toLowerCase()] = true;
       result.skipped++;
       continue;
@@ -374,12 +366,24 @@ function checkEmailStatuses() {
   }
   createOrUpdateDashboardSheet(sheet);
 
-  SpreadsheetApp.getUi().alert(
-    '✅ Status Refresh Complete!\n\n' +
-    '• Updated: ' + updatedCount + ' rows\n' +
-    '• Bounces detected & moved: ' + bouncedCount + '\n' +
-    '• Positive replies: ' + positiveCount
-  );
+  // Only show alert when running interactively (not in time-driven triggers)
+  var summary = {
+    updatedRows: updatedCount,
+    bouncesDetected: bouncedCount,
+    positiveReplies: positiveCount
+  };
+  try {
+    SpreadsheetApp.getUi().alert(
+      '✅ Status Refresh Complete!\n\n' +
+      '• Updated: ' + updatedCount + ' rows\n' +
+      '• Bounces detected & moved: ' + bouncedCount + '\n' +
+      '• Positive replies: ' + positiveCount
+    );
+  } catch (uiErr) {
+    // Running in headless / time-driven trigger context — no UI available.
+    Logger.log('checkEmailStatuses result: ' + JSON.stringify(summary));
+  }
+  return summary;
 }
 
 function _isValidEmail(email) {

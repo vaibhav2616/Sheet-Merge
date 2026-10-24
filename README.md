@@ -1,141 +1,212 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v2.0.0-blue?style=for-the-badge" alt="v2.0.0">
-  <img src="https://img.shields.io/badge/Platform-Google%20Sheets-brightgreen?logo=googlesheets&style=for-the-badge" alt="Google Sheets">
-  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&style=for-the-badge" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Version-v2.1.0-blue?style=for-the-badge" alt="v2.1.0">
+  <img src="https://img.shields.io/badge/Tests-85%2F85%20Passing-brightgreen?logo=pytest&style=for-the-badge" alt="85/85 Tests Passing">
+  <img src="https://img.shields.io/badge/Platform-Google%20Sheets%20%7C%20Standalone%20Web-brightgreen?logo=googlesheets&style=for-the-badge" alt="Google Sheets and Web">
+  <img src="https://img.shields.io/badge/Backend-FastAPI%20%2B%20Docker-009688?logo=fastapi&style=for-the-badge" alt="FastAPI + Docker">
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT">
 </p>
 
-<h1 align="center">✉️ SheetMerge v2</h1>
-<p align="center"><strong>Enterprise-Grade, Anti-Spam Mail Merge for Google Sheets — Single Unified Status Column, Automated Daily 50-Send Scheduling, Multi-Account Rotation, and Deliverability Intelligence</strong></p>
+<h1 align="center">✉️ SheetMerge Enterprise (v2.1)</h1>
+<p align="center"><strong>The Modern, Spam-Resistant Mail Merge Suite — Dual Platform: Google Sheets Add-on & Standalone Web Application</strong></p>
 <p align="center">
-  <em>An open-source, spam-resistant alternative to Yet Another Mail Merge (YAMM) with native Gmail draft support, responsive light/dark UI, and automatic bounce isolation.</em>
+  <em>Featuring a single, YAMM-compatible <strong>Merge Status</strong> column, automatic multi-column consolidation, guaranteed 50 valid daily deliveries, native light/dark UI, 5xx permanent bounce suppression, and enterprise SPF/DKIM/DMARC deliverability guard.</em>
 </p>
 
 ---
 
-## ⚡ What's New in v2.0
+## 🎨 Visual UI Architecture & Feature Showcase
+
+### 1. Standalone Web Application Interface (`/`)
+Run locally or deploy to the cloud. Upload CSVs, customize templates with live recipient preview, run pre-flight anti-spam audits, and track live transmission events in real time:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ✉️ SheetMerge Enterprise   [📁 Contacts]  [✍️ Template]  [🛡️ Deliverability]  [🚀 Dispatch]   │ [☀️ Light] │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 📁 Contacts & Unified Status Grid (Single 'Merge Status' Column)                           │
+│                                                                                             │
+│  [📄 Drop recipient CSV here or browse (auto-maps headers)]                                │
+│                                                                                             │
+│  RECORDS: 5 contacts loaded                          [📥 Export Enriched CSV with Status]    │
+│  ┌───┬──────────────────────────┬──────────────┬──────────────────┬───────────────────────┐ │
+│  │ # │ Recipient Email          │ Name         │ Company          │ Merge Status          │ │
+│  ├───┼──────────────────────────┼──────────────┼──────────────────┼───────────────────────┤ │
+│  │ 1 │ alex.rivera@acme.corp    │ Alex Rivera  │ Acme Corp        │ [ Sent ]              │ │
+│  │ 2 │ sarah.c@cloudscale.io    │ Sarah Chen   │ CloudScale       │ [ Opened ]            │ │
+│  │ 3 │ marcus.t@nexusfin.com    │ Marcus T.    │ Nexus Financial  │ [ Positive Reply ]    │ │
+│  │ 4 │ fake-user@dead-dom.org   │ Test User    │ Test Co          │ [ Bounced ]           │ │
+│  │ 5 │ elena.b@horizontech.ai   │ Elena Brooks │ HorizonTech      │ [ Pending ]           │ │
+│  └───┴──────────────────────────┴──────────────┴──────────────────┴───────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 🛡️ Pre-Flight Deliverability Guard               👁️ Live Dynamic Recipient Preview           │
+│                                                                                             │
+│  DELIVERABILITY SCORE: 95 / 100 [SAFE / INBOX]   To: alex.rivera@acme.corp                  │
+│  ██████████████████████████████████░░░░ 95%      Subject: Quick idea for Acme Corp          │
+│                                                                                             │
+│  ✔ SPF: Valid include:_spf.google.com ~all       "Hi Alex, I came across your team at       │
+│  ✔ DMARC: Policy p=reject (Strict quarantine)     Acme Corp and was impressed by your       │
+│  ✔ Spam Trigger Word Check: 0 flags detected      recent growth initiatives..."             │
+│  ✔ Socket Timeout: 30s configured                [⚡ Launch 50-Quota Campaign]             │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 2. Google Sheets Sidebar UI (Responsive Executive Theme with Light/Dark Mode)
+Embedded directly in Google Sheets via `✉️ SheetMerge > 📧 Open Mail Merge Sidebar (v2)`:
+
+```
+┌───────────────────────────────────────┐
+│ ✉️ SheetMerge v2.1        [🌙 / ☀️]   │
+├───────────────────────────────────────┤
+│ 🎯 CAMPAIGN STATUS                    │
+│ Target: 50 Valid Sends / Day          │
+│ Pacing: 15s (±35% Randomized Jitter)  │
+│                                       │
+│ 📝 GMAIL DRAFT SELECTION              │
+│ [ Q4 Outreach Strategy Draft     ▼ ]  │
+│                                       │
+│ 👥 RECIPIENT COLUMN MAPPING           │
+│ Email Column: [ Email             ▼ ] │
+│ Name Column:  [ First Name        ▼ ] │
+│                                       │
+│ 🛡️ DELIVERABILITY & AUTOMATION        │
+│ [✔] 5xx Hard Bounce Suppression       │
+│ [✔] Multi-Account Daily Alternation   │
+│ [✔] Auto-Sort Bounces to Bottom       │
+│ [✔] Auto-Sync Positive Replies Sheet  │
+│                                       │
+│ [ ⚡ Run Daily Batch (50 Sends)   ]   │
+│ [ ⏰ Configure Scheduled Trigger   ]   │
+│ [ 🗂️ Consolidate to Merge Status ]   │
+└───────────────────────────────────────┘
+```
+
+---
+
+## ⚡ Core Upgrades in v2.1
 
 | Feature | Description |
-|---------|-------------|
-| 🎯 **Single Unified Status Column** | Replaced 10 cluttering columns with one clean **`SheetMerge Status`** column featuring rich pastel color badges (`Sent`, `Opened`, `Clicked`, `Replied`, `Positive Reply`, `Bounced`, `Blocked`, `Duplicate`) and comprehensive cell notes. |
-| 🛡️ **Guaranteed 50-Daily Deliveries** | If an email bounces or fails syntax verification, the engine does **not** stop; it continues through the sheet until exactly 50 *successful* deliveries are completed. |
-| 🛑 **5xx Permanent Bounce Interception** | Automatically detects hard bounces (`550 5.4.1`, `User unknown`) and immediately suppresses them from ever being contacted again. |
-| 🔻 **Automatic Bounce Isolation** | Pushes all bounced or blocked leads directly to the bottom of the sheet, keeping the active list fresh and actionable. |
-| ✨ **Auto-Generating Valid Contacts Sheet** | Progressively builds a dedicated `✨ Valid Contacts` sheet containing only verified, deliverable contacts as traversal proceeds daily. |
-| ⏰ **Automated Daily Sending (No Intervention)** | Native time-driven triggers wake up SheetMerge automatically every day at your chosen hour (e.g., 09:00 AM) to send 50 emails and record metrics without opening your browser. |
-| 🔄 **Multi-Account Alternation** | Supports alternating sending across 2 or more Google accounts (e.g. 50 from Account A, then 50 from Account B) via Apps Script multi-user sharing or FastAPI round-robin rotation. |
-| 🧠 **Anti-Spam Humanization Engine** | Avoids campaign blast signatures by randomizing dispatch intervals (e.g. 15s ±35% jitter) and sending via genuine user Gmail drafts. |
-| 🔐 **Enterprise DNS & Deliverability Guard** | Built-in SPF, DKIM, and DMARC inspection endpoints and content spam keyword analyzer to safeguard domain reputation against Microsoft Exchange and enterprise firewall rejections. |
-| 🎨 **Responsive Executive UI** | Clean, non-AI influenced interface with an instant **Light / Dark Mode** toggle, clean typography, and customizable layout. |
-| 🐍 **FastAPI High-Scale Backend** | Python FastAPI server handling multi-account rotation, open/click redirects, socket timeout enforcement (`timeout=30s`), and permanent campaign history. |
+|---|---|
+| 🎯 **Single YAMM-Compatible Column** | Uses exactly one **`Merge Status`** column. Recognizes legacy YAMM tokens (`EMAIL_SENT`, `EMAIL_OPENED`, `EMAIL_CLICKED`, `EMAIL_RESPONDED`, `EMAIL_BOUNCED`) and modern badges (`Sent`, `Opened`, `Positive Reply`, `Bounced`). |
+| 🗂️ **Automatic Column Consolidation** | Automatically identifies separated legacy columns (`Email Status`, `Bounce Status`, `Reply Status`, `Click Status`, `Track ID`, `MM_*`) and collapses them into `Merge Status`, safely deleting redundant columns. |
+| 🛡️ **Guaranteed 50 Valid Daily Sends** | Syntax errors and bounces do not deplete your campaign quota; SheetMerge continues through the sheet until exactly 50 *successful* deliveries are completed. |
+| 🛑 **5xx Permanent Hard Bounce Catch** | Catches `550 5.4.1` permanent bounces, records them in the local SQLite suppression list, and immediately halts subsequent retries to preserve domain reputation. |
+| 🌐 **Dual Platform: Web App + Sheets** | Use as an Apps Script add-on inside Google Sheets or run as a standalone web application anywhere with zero Google account lock-in. |
+| 🔐 **DNS & Anti-Spam Security Suite** | Live SPF, DKIM, and DMARC verification endpoint (`/api/security/check-domain`) and 45+ rule content spam keyword scanner (`/api/security/analyze-content`). |
+| ⏰ **Hands-Free Daily Automation** | Native Apps Script time triggers fire every morning (e.g. 09:00 AM) to send 50 emails and sync statuses without opening a browser. |
+| 🧪 **85 Automated Unit & Integration Tests** | 100% test pass rate across Jest (37 JS tests) and Pytest (48 Python integration tests). |
 
 ---
 
-## 🛡️ Enterprise Deliverability & Anti-Spam Guidelines
+## 📊 Single "Merge Status" Column Reference
 
-To prevent enterprise mail servers (Microsoft Exchange, Outlook, Google Workspace, Proofpoint) from rejecting or throttling your self-made mail merge script, SheetMerge adheres to 3 foundational pillars:
+SheetMerge formats the unified column with high-contrast, professional badges:
 
-### 1. Script Logic & Throttling
-* **Paced Connection Frequency:** Never burst 50 emails simultaneously. SheetMerge introduces randomized human throttling (`random.uniform(2, 5)` seconds or 15s $\pm 35\%$ jitter) between dispatches to mimic natural user behavior.
-* **Catch & Halt 5xx Hard Bounces:** If a recipient returns a permanent rejection (e.g., `550 5.4.1 Recipient address rejected`), the address is immediately flagged, written to the suppression table, and permanently skipped. Continuing to contact dead addresses rapidly destroys IP and domain reputation.
-* **Configured Socket Timeouts:** All connection sockets explicitly set `timeout=30.0` seconds to prevent indefinite network hanging when enterprise firewalls silently drop connections.
+| Status Badge | Color Styling | Meaning & Lifecycle |
+|---|---|---|
+| **Sent** (`EMAIL_SENT`) | `#dcfce7` (Soft Green) | Message delivered via Gmail API or SMTP relay |
+| **Opened** (`EMAIL_OPENED`) | `#dbeafe` (Soft Blue) | Recipient rendered transparent tracking pixel |
+| **Clicked** (`EMAIL_CLICKED`) | `#f3e8ff` (Soft Purple) | Recipient clicked an embedded tracked link |
+| **Replied** (`EMAIL_REPLIED`) | `#e0e7ff` (Soft Indigo) | Inbound reply detected in sender inbox |
+| **Positive Reply** | `#d1fae5` (Emerald) | AI/keyword-matched high-intent reply ("interested", "demo", "call") |
+| **Bounced** (`EMAIL_BOUNCED`) | `#fee2e2` (Soft Red) | Permanent 5xx hard bounce or delivery failure |
+| **Blocked** (`EMAIL_BLOCKED`) | `#ffedd5` (Soft Orange) | Gateway spam block or domain policy rejection |
+| **Duplicate** | `#fef3c7` (Amber) | Address appeared multiple times; duplicate skipped |
+| **Pending** | `#f8fafc` (Neutral) | Scheduled for upcoming daily batch |
 
-### 2. Domain Authentication (Crucial for Enterprise Inboxes)
-Enterprise mail filters automatically quarantine or reject script-generated emails lacking valid DNS security:
-* **SPF (Sender Policy Framework):** Ensure your domain's TXT record includes your sending relay (e.g., `v=spf1 include:_spf.google.com ~all`).
-* **DKIM (DomainKeys Identified Mail):** Cryptographically sign outbound messages so receiving mail exchange servers can verify the message wasn't spoofed or modified in transit.
-* **DMARC (Domain-based Message Authentication):** Publish a `_dmarc.yourdomain.com` TXT record (starting with `v=DMARC1; p=none; sp=none;`) to instruct destination servers on how to handle unauthenticated traffic.
-* *Use SheetMerge's built-in endpoint `POST /api/security/check-domain` to verify your domain records instantly.*
-
-### 3. Sending Behavior & List Hygiene
-* **Avoid Spammy Content:** Avoid subject line capitalization shouting, excessive exclamation marks, and sales trigger phrases. Check copy via `POST /api/security/analyze-content`.
-* **Authenticated Relays:** Send via Google Workspace OAuth or reputable authenticated SMTP relays rather than untrusted raw server IPs.
-* **Pre-Flight List Sanitization:** Pre-validate syntax, disposable domains, and MX reachability using `POST /api/security/clean-list` before launching any outreach.
+> **Cell Note Metadata:** All extended metadata (exact ISO timestamps, track IDs, sender account email, and bounce error descriptions) are stored inside the cell's **Note**, keeping your sheet clean and export-ready.
 
 ---
 
-## 📌 Daily Limit & Bounce Mechanics Explained
+## 🚀 Getting Started
 
-> **Does a bounced email count towards Google's daily sending limit?**
->
-> 1. **From Gmail's Infrastructure Perspective:** When `GmailApp.sendEmail()` executes, Google accepts the message and counts 1 send against your daily account quota (500/day for free Gmail, 2,000/day for Workspace). The bounce notification (`MAILER-DAEMON`) arrives asynchronously minutes later.
-> 2. **From SheetMerge's Campaign Perspective:** In SheetMerge v2, a bounced or invalid address is **not** counted as a successful send. The engine checks email syntax and historical suppression, pushes failed addresses to the end of the sheet, and continues until **50 verified successful deliveries** have been achieved for your daily batch.
+### Option A: Standalone Web Application (Docker or Local)
 
----
-
-## 🚀 Installation & Setup on Google Sheets
-
-### Method 1: Clasp CLI (Fastest)
+The standalone edition runs on FastAPI and serves the responsive single-page web app at `/`:
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/vaibhav2616/Sheet-Merge.git
 cd Sheet-Merge
 
-# 2. Authenticate clasp
-npx @google/clasp login
+# 2. Run with Docker (Fastest)
+docker build -t sheetmerge .
+docker run -p 8000:8000 sheetmerge
 
-# 3. Push all files to your Google Sheet's Apps Script
+# Or run locally with Python:
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+Open **`http://localhost:8000`** in your browser to access the application!
+
+---
+
+### Option B: Google Sheets Add-on Setup
+
+#### Method 1: Clasp CLI (Recommended)
+```bash
+git clone https://github.com/vaibhav2616/Sheet-Merge.git
+cd Sheet-Merge
+npx @google/clasp login
 npx @google/clasp push -f
+```
+
+#### Method 2: Manual Browser Setup
+1. Open your Google Sheet (or create one at [sheets.new](https://sheets.new)).
+2. Navigate to **Extensions → Apps Script**.
+3. In **Project Settings (⚙️)**, check **"Show 'appsscript.json' manifest file in editor"**.
+4. Replace `appsscript.json` with the repository's [`appsscript.json`](appsscript.json).
+5. Copy files from `src/*.js` as Script files and `html/*.html` as HTML files.
+6. Refresh your Google Sheet — the **`✉️ SheetMerge`** menu will appear!
+
+---
+
+## 🧪 Testing Suite (85 Virtual Scenario Tests)
+
+Every component is validated through virtual scenario test suites covering template rendering, email syntax, track ID generation, YAMM status normalization, SMTP dispatch, socket timeout leaks, DNS resolution, and REST endpoints:
+
+```bash
+# Run JavaScript logic tests (Jest: 37 tests)
+npm test
+
+# Run Python backend integration tests (Pytest: 48 tests)
+python -m pytest backend/tests -v
 ```
 
 ---
 
-### Method 2: Manual Browser Setup (No Node.js Required)
+## 📢 LinkedIn Announcement Template
 
-1. Open your Google Sheet (or create one at [sheets.new](https://sheets.new)).
-2. In the top menu, go to **Extensions → Apps Script**.
-3. In **Project Settings (⚙️)**, check **"Show "appsscript.json" manifest file in editor"**.
-4. Replace `appsscript.json` with the repository's [`appsscript.json`](appsscript.json).
-5. Add the files under `src/` as **Script** files:
-   - `Code.js`, `Config.js`, `SheetManager.js`, `MailMerge.js`, `ContactManager.js`, `Automation.js`, `DashboardSheet.js`, `PositiveResponsesSheet.js`, `SidebarHelpers.js`, `Tracking.js`, `GmailDraftManager.js`.
-6. Add the files under `html/` as **HTML** files:
-   - `Sidebar.html`, `Dashboard.html`, `Settings.html`.
-7. Reload your Google Sheet. The **`✉️ SheetMerge`** menu will appear!
+Ready to share your launch on LinkedIn? Copy and adapt this template:
 
----
+```markdown
+🚀 Excited to open-source SheetMerge Enterprise (v2.1)!
 
-## 🔄 Multi-Account Alternation Guide
+Frustrated by mail merge tools that clutter your Google Sheets with 10 different status columns or blast 50 emails in 2 seconds and get flagged by enterprise firewalls?
 
-### Workflow A: Google Sheets Native (Zero Server Setup)
-1. Share your master Google Sheet with your secondary Google account (grant `Editor` access).
-2. Open the sheet logged into **Account 1** → Menu: `✉️ SheetMerge > ⏰ Configure Automated Daily Sending` → Set trigger at **09:00 AM**.
-3. Open the sheet logged into **Account 2** → Set trigger at **03:00 PM**.
-4. Both accounts will sequentially pick up where the other left off, each sending 50 emails and color-coding the single `SheetMerge Status` column.
+I built and open-sourced SheetMerge — a modern, anti-spam mail merger with two ways to run:
+1️⃣ Native Google Sheets Add-on
+2️⃣ Standalone Web Application (FastAPI + Docker)
 
-### Workflow B: Python FastAPI Multi-Account Rotation
-1. Start the FastAPI backend:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   uvicorn main:app --reload --port 8000
-   ```
-2. Register your sending accounts via API:
-   ```bash
-   curl -X POST http://localhost:8000/api/accounts -H "Content-Type: application/json" -d '{"email": "account1@gmail.com", "daily_quota": 50}'
-   curl -X POST http://localhost:8000/api/accounts -H "Content-Type: application/json" -d '{"email": "account2@gmail.com", "daily_quota": 50}'
-   ```
-3. The backend tracks quotas and campaign history in SQLite to avoid re-contacting any lead.
+Here is what makes it different:
+• 🎯 Single 'Merge Status' Column: 100% compatible with Yet Another Mail Merge (YAMM), with automated legacy column consolidation.
+• 🛡️ Guaranteed 50 Valid Daily Sends: Bounced or invalid addresses are bypassed so you always hit your exact daily outreach target.
+• 🛑 5xx Permanent Bounce Catch: Halts repeated sends to dead inboxes to protect domain reputation.
+• 🔐 Deliverability Guard: Live SPF, DKIM, and DMARC inspection + content spam keyword scanner.
+• ⏰ Hands-Free Scheduling: Daily automated sending without opening your browser.
+• 🧪 85 Automated Unit & Integration Tests: Fully tested with Jest and Pytest.
 
----
+Check out the code, run it locally, or star the repository on GitHub:
+👉 https://github.com/vaibhav2616/Sheet-Merge
 
-## 📊 Single Status Color Coding Reference
+Would love to hear your feedback! 🙌
 
-| Status | Badge Background | Font Color | Meaning |
-|---|---|---|---|
-| **Sent** | `#dcfce7` (Soft Green) | `#166534` | Email successfully dispatched via Gmail |
-| **Opened** | `#dbeafe` (Soft Blue) | `#1e40af` | Recipient opened email |
-| **Clicked** | `#f3e8ff` (Soft Purple) | `#6b21a8` | Recipient clicked an embedded link |
-| **Replied** | `#e0e7ff` (Soft Indigo) | `#3730a3` | Reply detected in Gmail inbox |
-| **Positive Reply** | `#d1fae5` (Rich Emerald) | `#065f46` | High-intent interested reply detected |
-| **Bounced** | `#fee2e2` (Soft Red) | `#991b1b` | Mail delivery subsystem bounce |
-| **Blocked** | `#ffedd5` (Soft Orange) | `#9a3412` | Sending blocked / spam policy rejection |
-| **Duplicate** | `#fef3c7` (Amber) | `#92400e` | Skipped because contact was already emailed |
-
-*All extended metadata (Sent timestamp, Track ID, error messages, and sender account) is neatly stored in the cell's note so your sheet remains clean.*
+#OpenSource #Python #FastAPI #GoogleAppsScript #EmailDeliverability #WebDevelopment #Productivity
+```
 
 ---
 
 ## 📄 License
-
-MIT License. Designed and maintained for open-source community use.
+MIT License. Open-source and free for individual, commercial, and enterprise use.

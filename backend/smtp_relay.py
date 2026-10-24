@@ -10,7 +10,6 @@ Enterprise-grade SMTP dispatcher supporting:
 
 from __future__ import annotations
 
-import asyncio
 import os
 import random
 import smtplib

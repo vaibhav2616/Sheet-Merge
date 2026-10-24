@@ -62,8 +62,8 @@ function getDataSheet() {
 
 /**
  * Ensures the single unified status column exists in row 1.
- * Adds 'SheetMerge Status' at the end if not found.
- * Also migrates legacy MM_ columns cleanly if encountered.
+ * Uses 'Merge Status' (100% compatible with Yet Another Mail Merge).
+ * If 'SheetMerge Status' exists from earlier versions, renames it cleanly.
  *
  * @param {Sheet} sheet
  * @return {Object} Updated header map
@@ -72,8 +72,17 @@ function ensureStatusColumns(sheet) {
   sheet = sheet || getDataSheet();
   var headers = getHeaders(sheet);
 
-  // Check if unified column exists
+  // Check if primary 'Merge Status' or legacy alias exists
   var statusIdx = headers.indexOf(COL.STATUS);
+  if (statusIdx === -1 && COL.LEGACY_STATUS) {
+    statusIdx = headers.indexOf(COL.LEGACY_STATUS);
+    if (statusIdx !== -1) {
+      sheet.getRange(1, statusIdx + 1).setValue(COL.STATUS);
+      headers[statusIdx] = COL.STATUS;
+    }
+  }
+
+  // If still not found, append 'Merge Status' as a new column
   if (statusIdx === -1) {
     var newCol = headers.length + 1;
     var cell = sheet.getRange(1, newCol);
@@ -88,8 +97,113 @@ function ensureStatusColumns(sheet) {
 }
 
 /**
+ * Studies and consolidates all legacy or separated status columns
+ * (e.g. Email Status, Bounce Status, Reply Status, Click Status, MM_*, Track ID)
+ * into a single unified 'Merge Status' column (matching Yet Another Mail Merge standard).
+ * Standardizes raw values and deletes the redundant legacy columns.
+ *
+ * @param {Sheet} [sheet]
+ */
+function consolidateAndMigrateLegacyStatusColumns(sheet) {
+  sheet = sheet || getDataSheet();
+  var headers = getHeaders(sheet);
+  if (!headers || headers.length === 0) return;
+
+  var colMap = ensureStatusColumns(sheet);
+  var targetStatusCol = colMap[COL.STATUS];
+  var lastRow = sheet.getLastRow();
+
+  // Known legacy column names to detect and consolidate
+  var legacyPatterns = [
+    'email status', 'bounce status', 'reply status', 'click status',
+    'opened', 'bounced', 'replied', 'clicked',
+    'mm_status', 'mm_sentat', 'mm_openedat', 'mm_clickedat',
+    'mm_repliedat', 'mm_bouncedat', 'mm_error', 'track id', 'tracking id'
+  ];
+
+  var legacyIndices = [];
+  headers.forEach(function(h, idx) {
+    var lower = String(h || '').trim().toLowerCase();
+    if (idx + 1 === targetStatusCol) return;
+    if (lower === COL.STATUS.toLowerCase()) return;
+    for (var k = 0; k < legacyPatterns.length; k++) {
+      if (lower === legacyPatterns[k] || lower.indexOf('mm_') === 0) {
+        legacyIndices.push({ index: idx + 1, header: h, lower: lower });
+        break;
+      }
+    }
+  });
+
+  if (lastRow >= 2) {
+    var dataRange = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn());
+    var values = dataRange.getValues();
+
+    for (var r = 0; r < values.length; r++) {
+      var rowNum = r + 2;
+      var currentVal = String(values[r][targetStatusCol - 1] || '').trim();
+      var metaNote = {};
+
+      var resolvedStatus = '';
+      if (currentVal) {
+        resolvedStatus = parseStatusString(currentVal);
+      }
+
+      // Check legacy columns if target column was empty or needs metadata
+      legacyIndices.forEach(function(leg) {
+        var val = String(values[r][leg.index - 1] || '').trim();
+        if (!val) return;
+
+        if (leg.lower.indexOf('error') !== -1) metaNote.error = val;
+        if (leg.lower.indexOf('track') !== -1) metaNote.trackId = val;
+        if (leg.lower.indexOf('sentat') !== -1) metaNote.timestamp = val;
+
+        if (!resolvedStatus || resolvedStatus === STATUS.PENDING) {
+          if (leg.lower.indexOf('bounce') !== -1 && val.toLowerCase().indexOf('bounc') !== -1) {
+            resolvedStatus = STATUS.BOUNCED;
+          } else if (leg.lower.indexOf('reply') !== -1 && val) {
+            resolvedStatus = val.toLowerCase().indexOf('pos') !== -1 ? STATUS.POSITIVE : STATUS.REPLIED;
+          } else if (leg.lower.indexOf('click') !== -1 && val.toLowerCase().indexOf('click') !== -1) {
+            resolvedStatus = STATUS.CLICKED;
+          } else if (leg.lower.indexOf('open') !== -1 && val.toLowerCase().indexOf('open') !== -1) {
+            resolvedStatus = STATUS.OPENED;
+          } else if (leg.lower.indexOf('email status') !== -1 || leg.lower === 'mm_status') {
+            resolvedStatus = parseStatusString(val);
+          }
+        }
+      });
+
+      if (resolvedStatus && resolvedStatus !== currentVal) {
+        setCellStatus(sheet, rowNum, resolvedStatus, metaNote);
+      } else if (currentVal) {
+        // Apply badge styling to existing YAMM / legacy values
+        var std = parseStatusString(currentVal);
+        var style = STATUS_COLORS[currentVal] || STATUS_COLORS[std] || { bg: '#ffffff', text: '#000000' };
+        var cell = sheet.getRange(rowNum, targetStatusCol);
+        cell.setBackground(style.bg);
+        cell.setFontColor(style.text);
+        cell.setFontWeight('bold');
+        cell.setHorizontalAlignment('center');
+      }
+    }
+  }
+
+  // Safely delete legacy columns from right to left
+  var toDeleteCols = legacyIndices.map(function(item) { return item.index; });
+  toDeleteCols.sort(function(a, b) { return b - a; });
+  toDeleteCols.forEach(function(colIdx) {
+    sheet.deleteColumn(colIdx);
+  });
+
+  try {
+    SpreadsheetApp.getUi().alert('✅ Successfully consolidated statuses into single "' + COL.STATUS + '" column. ' + toDeleteCols.length + ' legacy columns cleaned.');
+  } catch (e) {
+    Logger.log('Consolidated ' + toDeleteCols.length + ' legacy columns headlessly.');
+  }
+}
+
+/**
  * Applies color-coded badge styling and optional cell metadata note
- * to a single row's SheetMerge Status cell.
+ * to a single row's Merge Status cell.
  *
  * @param {Sheet} sheet
  * @param {number} rowIndex 1-indexed row number
@@ -105,7 +219,8 @@ function setCellStatus(sheet, rowIndex, status, meta) {
   cell.setValue(status);
 
   // Apply color coding
-  var style = STATUS_COLORS[status] || { bg: '#ffffff', text: '#000000' };
+  var std = parseStatusString(status);
+  var style = STATUS_COLORS[status] || STATUS_COLORS[std] || { bg: '#ffffff', text: '#000000' };
   cell.setBackground(style.bg);
   cell.setFontColor(style.text);
   cell.setFontWeight('bold');
@@ -132,7 +247,7 @@ function clearStatusColumns() {
   var toDelete = [];
 
   headers.forEach(function(h, i) {
-    if (h === COL.STATUS || h.startsWith('MM_')) {
+    if (h === COL.STATUS || h === COL.LEGACY_STATUS || h.startsWith('MM_')) {
       toDelete.push(i + 1); // 1-indexed
     }
   });
@@ -142,7 +257,11 @@ function clearStatusColumns() {
     sheet.deleteColumn(col);
   });
 
-  SpreadsheetApp.getUi().alert('✅ SheetMerge Status column reset.');
+  try {
+    SpreadsheetApp.getUi().alert('✅ ' + COL.STATUS + ' column reset.');
+  } catch (e) {
+    Logger.log('Status column reset.');
+  }
 }
 
 /* ── Row data access ──────────────────────────────────────────── */
@@ -213,17 +332,8 @@ function buildSentEmailSet(sheet, colMap, emailColName) {
     var email  = String(row[emailCol  - 1] || '').trim().toLowerCase();
     var status = String(row[statusCol - 1] || '').trim();
 
-    // Considered already contacted if sent, opened, clicked, replied, or positive
-    var alreadyDone = (
-      status === STATUS.SENT ||
-      status === STATUS.OPENED ||
-      status === STATUS.CLICKED ||
-      status === STATUS.REPLIED ||
-      status === STATUS.POSITIVE ||
-      status === 'Sent'
-    );
-
-    if (alreadyDone && email) {
+    // Considered already contacted if sent, opened, clicked, replied, bounced, or positive (YAMM + SheetMerge)
+    if (email && isProcessedStatus(status)) {
       sent[email] = true;
     }
   });
