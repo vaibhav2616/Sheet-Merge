@@ -177,36 +177,5 @@ python -m pytest backend/tests -v
 
 ---
 
-## 📢 LinkedIn Announcement Template
-
-Ready to share your launch on LinkedIn? Copy and adapt this template:
-
-```markdown
-🚀 Excited to open-source SheetMerge Enterprise (v2.1)!
-
-Frustrated by mail merge tools that clutter your Google Sheets with 10 different status columns or blast 50 emails in 2 seconds and get flagged by enterprise firewalls?
-
-I built and open-sourced SheetMerge — a modern, anti-spam mail merger with two ways to run:
-1️⃣ Native Google Sheets Add-on
-2️⃣ Standalone Web Application (FastAPI + Docker)
-
-Here is what makes it different:
-• 🎯 Single 'Merge Status' Column: 100% compatible with Yet Another Mail Merge (YAMM), with automated legacy column consolidation.
-• 🛡️ Guaranteed 50 Valid Daily Sends: Bounced or invalid addresses are bypassed so you always hit your exact daily outreach target.
-• 🛑 5xx Permanent Bounce Catch: Halts repeated sends to dead inboxes to protect domain reputation.
-• 🔐 Deliverability Guard: Live SPF, DKIM, and DMARC inspection + content spam keyword scanner.
-• ⏰ Hands-Free Scheduling: Daily automated sending without opening your browser.
-• 🧪 85 Automated Unit & Integration Tests: Fully tested with Jest and Pytest.
-
-Check out the code, run it locally, or star the repository on GitHub:
-👉 https://github.com/vaibhav2616/Sheet-Merge
-
-Would love to hear your feedback! 🙌
-
-#OpenSource #Python #FastAPI #GoogleAppsScript #EmailDeliverability #WebDevelopment #Productivity
-```
-
----
-
 ## 📄 License
 MIT License. Open-source and free for individual, commercial, and enterprise use.
