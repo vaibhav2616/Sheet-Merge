@@ -30,7 +30,7 @@
 
 ---
 
-## 🚀 How Anyone Can Use SheetMerge on Google Sheets
+## 🚀 How To Use SheetMerge on Google Sheets
 
 Follow either **Method 1 (Fastest via Clasp CLI)** or **Method 2 (No Coding / Copy-Paste in Browser)**.
 
