@@ -10,30 +10,41 @@
 
 /* ── Constants ────────────────────────────────────────────────── */
 var ADDON_NAME  = 'SheetMerge';
-var VERSION     = '1.0.0';
+var VERSION     = '2.0.0';
 
-/* Status column labels written into the data sheet */
+/* Single Unified Status column label written into the data sheet */
 var COL = {
-  STATUS    : 'MM_Status',
-  SENT_AT   : 'MM_SentAt',
-  MESSAGE_ID: 'MM_MessageId',
-  TRACK_ID  : 'MM_TrackId',
-  OPENED    : 'MM_Opened',
-  CLICKED   : 'MM_Clicked',
-  REPLIED   : 'MM_Replied',
-  POSITIVE  : 'MM_Positive',
-  BOUNCED   : 'MM_Bounced',
-  BLOCKED   : 'MM_Blocked',
-  ERROR     : 'MM_Error'
+  STATUS: 'SheetMerge Status'
 };
 
-/* Possible values for MM_Status */
+/* Semantic status badge values */
 var STATUS = {
   PENDING  : 'Pending',
   SENT     : 'Sent',
+  OPENED   : 'Opened',
+  CLICKED  : 'Clicked',
+  REPLIED  : 'Replied',
+  POSITIVE : 'Positive Reply',
+  BOUNCED  : 'Bounced',
+  BLOCKED  : 'Blocked',
   FAILED   : 'Failed',
   SKIPPED  : 'Skipped',
   DUPLICATE: 'Duplicate'
+};
+
+/* Color-coded badge palette (subtle, high-contrast, professional) */
+var STATUS_COLORS = {
+  'Sent':           { bg: '#dcfce7', text: '#166534' }, // Soft Green
+  'Opened':         { bg: '#dbeafe', text: '#1e40af' }, // Soft Blue
+  'Clicked':        { bg: '#f3e8ff', text: '#6b21a8' }, // Soft Purple
+  'Replied':        { bg: '#e0e7ff', text: '#3730a3' }, // Soft Indigo
+  'Positive Reply': { bg: '#d1fae5', text: '#065f46' }, // Rich Emerald
+  'Bounced':        { bg: '#fee2e2', text: '#991b1b' }, // Soft Red
+  'Blocked':        { bg: '#ffedd5', text: '#9a3412' }, // Soft Orange
+  'Failed':         { bg: '#fecaca', text: '#b91c1c' }, // Crimson
+  'Duplicate':      { bg: '#fef3c7', text: '#92400e' }, // Amber
+  'Skipped':        { bg: '#f1f5f9', text: '#475569' }, // Slate Gray
+  'Pending':        { bg: '#f8fafc', text: '#64748b' }  // Neutral
 };
 
 /* ── Lifecycle hooks ──────────────────────────────────────────── */
@@ -45,24 +56,22 @@ var STATUS = {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('✉️ ' + ADDON_NAME)
-    .addItem('📧 Open Mail Merge Sidebar', 'showSidebar')
+    .addItem('📧 Open Mail Merge Sidebar (v2)',          'showSidebar')
     .addSeparator()
-    .addItem('📊 Create / Refresh Visual Dashboard Sheet', 'createOrUpdateDashboardSheet')
-    .addItem('🎯 Sync Positive Responses to New Sheet',    'syncPositiveResponsesSheet')
-    .addItem('📋 Move Contactable Leads to Bottom',        'moveContactableToBottom')
-    .addItem('📋 Move Contacted Leads to Bottom',          'moveContactedToBottom')
+    .addItem('⚡ Run Daily Batch Now (50 Valid Sends)',  'runDailyBatchNow')
+    .addItem('⏰ Configure Automated Daily Sending',     'showSettings')
     .addSeparator()
-    .addItem('📈 Popup Metrics Dashboard',                'showDashboard')
-    .addItem('⚙️  Settings',                              'showSettings')
+    .addItem('📊 Create / Refresh Visual Dashboard',     'createOrUpdateDashboardSheet')
+    .addItem('🎯 Sync Positive Responses to New Sheet',  'syncPositiveResponsesSheet')
+    .addItem('✨ Generate / Update Valid Contacts Sheet','buildValidContactsSheet')
+    .addItem('🔻 Move Bounced & Blocked to Bottom',      'moveBouncedAndBlockedToBottom')
     .addSeparator()
-    .addItem('🔄 Refresh Email Statuses',                 'checkEmailStatuses')
-    .addItem('⭐ Mark Selected Row as Positive Response',  'markSelectedRowPositive')
-    .addItem('🧹 Reset Status Columns',                   'clearStatusColumns')
+    .addItem('🔄 Refresh Statuses & Bounces from Inbox', 'checkEmailStatuses')
+    .addItem('⭐ Mark Selected Row as Positive',         'markSelectedRowPositive')
+    .addItem('🧹 Reset Status Column',                   'clearStatusColumns')
     .addSeparator()
-    .addItem('📥 Export Config (JSON)',                   'exportConfig')
-    .addItem('📤 Import Config (JSON)',                   'importConfig')
-    .addSeparator()
-    .addItem('❓ Help & Documentation',                   'showHelp')
+    .addItem('⚙️  Settings & Multi-Account',              'showSettings')
+    .addItem('❓ Help & Documentation',                  'showHelp')
     .addToUi();
 }
 
@@ -124,6 +133,13 @@ function showHelp() {
 }
 
 /**
+ * Runs a 50-send daily batch immediately from the menu.
+ */
+function runDailyBatchNow() {
+  dailyAutomatedMerge();
+}
+
+/**
  * Helper used by HTML templates to inline other HTML files.
  * Usage inside a template: <?!= include('Styles') ?>
  *
@@ -137,3 +153,4 @@ function include(filename) {
     return HtmlService.createTemplateFromFile('html/' + filename).getContent();
   }
 }
+

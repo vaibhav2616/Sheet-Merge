@@ -1,8 +1,8 @@
 /**
- * SheetManager.js — Sheet utility functions
- * ==========================================
- * Handles column detection, status column management, header mapping,
- * duplicate detection, and row-level read/write operations.
+ * SheetManager.js — Sheet utility functions (v2 Unified Status Edition)
+ * ======================================================================
+ * Handles column detection, single-column status management with rich color coding,
+ * cell notes for detailed metadata, duplicate detection, and row read/write operations.
  */
 
 /* ── Header utilities ─────────────────────────────────────────── */
@@ -30,13 +30,19 @@ function getHeaderMap(sheet) {
 }
 
 /**
- * Returns the active spreadsheet's first visible non-config sheet,
- * or the sheet named in config.
+ * Returns the active spreadsheet's primary lead/data sheet,
+ * skipping internal utility and report tabs.
  */
 function getDataSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var active = ss.getActiveSheet();
-  var skipSheets = ['_MM_Metrics', '_MM_Tracking', '📊 SheetMerge Dashboard', '🎯 Positive Responses'];
+  var skipSheets = [
+    '_MM_Metrics',
+    '_MM_Tracking',
+    '📊 SheetMerge Dashboard',
+    '🎯 Positive Responses',
+    '✨ Valid Contacts'
+  ];
 
   if (active && skipSheets.indexOf(active.getName()) === -1) {
     return active;
@@ -52,34 +58,73 @@ function getDataSheet() {
   return sheets[0];
 }
 
-/* ── Status-column management ─────────────────────────────────── */
+/* ── Unified Single Status Column Management ────────────────────── */
 
 /**
- * Ensures all MM_ columns exist in the sheet header row.
- * Adds missing columns at the end.
+ * Ensures the single unified status column exists in row 1.
+ * Adds 'SheetMerge Status' at the end if not found.
+ * Also migrates legacy MM_ columns cleanly if encountered.
+ *
  * @param {Sheet} sheet
- * @return {Object}  Updated header map
+ * @return {Object} Updated header map
  */
 function ensureStatusColumns(sheet) {
   sheet = sheet || getDataSheet();
   var headers = getHeaders(sheet);
-  var statusCols = Object.values(COL);   // MM_Status, MM_SentAt, …
 
-  statusCols.forEach(function(colName) {
-    if (headers.indexOf(colName) === -1) {
-      var newCol = headers.length + 1;
-      sheet.getRange(1, newCol).setValue(colName);
-      // Light yellow header background
-      sheet.getRange(1, newCol).setBackground('#fff9c4');
-      headers.push(colName);
-    }
-  });
+  // Check if unified column exists
+  var statusIdx = headers.indexOf(COL.STATUS);
+  if (statusIdx === -1) {
+    var newCol = headers.length + 1;
+    var cell = sheet.getRange(1, newCol);
+    cell.setValue(COL.STATUS);
+    cell.setFontWeight('bold');
+    cell.setBackground('#e2e8f0'); // Crisp slate-gray header
+    cell.setFontColor('#0f172a');
+    headers.push(COL.STATUS);
+  }
 
   return getHeaderMap(sheet);
 }
 
 /**
- * Removes all MM_ columns from the sheet (for reset).
+ * Applies color-coded badge styling and optional cell metadata note
+ * to a single row's SheetMerge Status cell.
+ *
+ * @param {Sheet} sheet
+ * @param {number} rowIndex 1-indexed row number
+ * @param {string} status Status string (e.g. 'Sent', 'Opened', 'Positive Reply', 'Bounced')
+ * @param {Object} [meta] Metadata object stored in the cell's note
+ */
+function setCellStatus(sheet, rowIndex, status, meta) {
+  var colMap = ensureStatusColumns(sheet);
+  var col = colMap[COL.STATUS];
+  if (!col) return;
+
+  var cell = sheet.getRange(rowIndex, col);
+  cell.setValue(status);
+
+  // Apply color coding
+  var style = STATUS_COLORS[status] || { bg: '#ffffff', text: '#000000' };
+  cell.setBackground(style.bg);
+  cell.setFontColor(style.text);
+  cell.setFontWeight('bold');
+  cell.setHorizontalAlignment('center');
+
+  // Attach metadata to cell note so data sheet remains pristine
+  if (meta) {
+    var noteLines = ['Status: ' + status];
+    if (meta.timestamp) noteLines.push('Timestamp: ' + meta.timestamp);
+    if (meta.trackId)   noteLines.push('Track ID: ' + meta.trackId);
+    if (meta.account)   noteLines.push('Sender Account: ' + meta.account);
+    if (meta.error)     noteLines.push('Error: ' + meta.error);
+    if (meta.details)   noteLines.push('Details: ' + meta.details);
+    cell.setNote(noteLines.join('\n'));
+  }
+}
+
+/**
+ * Clears the unified status column (or legacy MM_ columns) for reset.
  */
 function clearStatusColumns() {
   var sheet = getDataSheet();
@@ -87,15 +132,17 @@ function clearStatusColumns() {
   var toDelete = [];
 
   headers.forEach(function(h, i) {
-    if (h.startsWith('MM_')) toDelete.push(i + 1); // 1-indexed
+    if (h === COL.STATUS || h.startsWith('MM_')) {
+      toDelete.push(i + 1); // 1-indexed
+    }
   });
 
-  // Delete right-to-left to preserve indices
+  // Delete right-to-left to preserve index stability
   toDelete.reverse().forEach(function(col) {
     sheet.deleteColumn(col);
   });
 
-  SpreadsheetApp.getUi().alert('✅ All MM_ status columns removed.');
+  SpreadsheetApp.getUi().alert('✅ SheetMerge Status column reset.');
 }
 
 /* ── Row data access ──────────────────────────────────────────── */
@@ -126,30 +173,30 @@ function getDataRows(sheet, startRow) {
 }
 
 /**
- * Writes a set of column values to a specific row.
- * @param {Sheet}  sheet
- * @param {number} rowIndex   1-indexed
- * @param {Object} colMap     { headerName: 1-indexed-col }
- * @param {Object} updates    { headerName: value }
+ * Legacy compatibility wrapper for writing row status.
  */
 function writeRowStatus(sheet, rowIndex, colMap, updates) {
-  Object.keys(updates).forEach(function(key) {
-    var col = colMap[key];
-    if (col) {
-      sheet.getRange(rowIndex, col).setValue(updates[key]);
-    }
-  });
+  // If status is supplied in updates, use setCellStatus
+  var status = updates[COL.STATUS] || updates['MM_Status'];
+  if (status) {
+    var meta = {
+      timestamp: updates['MM_SentAt'] || new Date().toISOString(),
+      trackId: updates['MM_TrackId'],
+      error: updates['MM_Error']
+    };
+    setCellStatus(sheet, rowIndex, status, meta);
+  }
 }
 
-/* ── Duplicate detection ──────────────────────────────────────── */
+/* ── Duplicate & Sent History Detection ──────────────────────── */
 
 /**
- * Returns a Set-like object (plain object) of email addresses that
- * already have status === STATUS.SENT, to prevent re-sending.
+ * Returns a Set-like object of email addresses that have already been
+ * contacted/sent, preventing re-sending and respecting campaign history.
  *
  * @param {Sheet}  sheet
  * @param {Object} colMap
- * @param {string} emailColName  Header name of the email column
+ * @param {string} emailColName Header name of the email column
  * @return {Object}  { 'email@example.com': true }
  */
 function buildSentEmailSet(sheet, colMap, emailColName) {
@@ -161,12 +208,22 @@ function buildSentEmailSet(sheet, colMap, emailColName) {
 
   var sent = {};
   var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
-  var headers = getHeaders(sheet);
 
   data.forEach(function(row) {
-    var email  = String(row[emailCol  - 1]).trim().toLowerCase();
-    var status = String(row[statusCol - 1]).trim();
-    if (status === STATUS.SENT && email) {
+    var email  = String(row[emailCol  - 1] || '').trim().toLowerCase();
+    var status = String(row[statusCol - 1] || '').trim();
+
+    // Considered already contacted if sent, opened, clicked, replied, or positive
+    var alreadyDone = (
+      status === STATUS.SENT ||
+      status === STATUS.OPENED ||
+      status === STATUS.CLICKED ||
+      status === STATUS.REPLIED ||
+      status === STATUS.POSITIVE ||
+      status === 'Sent'
+    );
+
+    if (alreadyDone && email) {
       sent[email] = true;
     }
   });
@@ -175,13 +232,10 @@ function buildSentEmailSet(sheet, colMap, emailColName) {
 }
 
 /**
- * Finds duplicate email addresses across all data rows (not just sent).
- * Returns an object where duplicated emails map to the row indices that
- * contain them.
- *
- * @param {Array} dataRows  Output of getDataRows()
+ * Finds duplicate email addresses across all data rows.
+ * @param {Array} dataRows Output of getDataRows()
  * @param {string} emailColName
- * @return {Object}  { 'dup@example.com': [2, 7, 12] }
+ * @return {Object} { 'dup@example.com': [2, 7, 12] }
  */
 function findDuplicates(dataRows, emailColName) {
   var seen  = {};
@@ -207,7 +261,7 @@ function findDuplicates(dataRows, emailColName) {
 /* ── Metrics summary ──────────────────────────────────────────── */
 
 /**
- * Computes a summary of all MM_ status values from the sheet.
+ * Computes a summary of all statuses from the single unified status column.
  * @return {Object}
  */
 function computeMetrics() {
@@ -218,57 +272,68 @@ function computeMetrics() {
   var metrics = {
     total    : 0,
     sent     : 0,
-    failed   : 0,
-    pending  : 0,
-    skipped  : 0,
-    duplicate: 0,
     opened   : 0,
     clicked  : 0,
     replied  : 0,
     positive : 0,
     bounced  : 0,
-    blocked  : 0
+    blocked  : 0,
+    failed   : 0,
+    duplicate: 0,
+    skipped  : 0,
+    pending  : 0
   };
 
-  var statusCol   = colMap[COL.STATUS];
-  var openedCol   = colMap[COL.OPENED];
-  var clickedCol  = colMap[COL.CLICKED];
-  var repliedCol  = colMap[COL.REPLIED];
-  var positiveCol = colMap[COL.POSITIVE];
-  var bouncedCol  = colMap[COL.BOUNCED];
-  var blockedCol  = colMap[COL.BLOCKED];
-
+  var statusCol = colMap[COL.STATUS];
   if (!statusCol || lastRow < 2) return metrics;
 
-  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  var data = sheet.getRange(2, statusCol, lastRow - 1, 1).getValues();
 
   data.forEach(function(row) {
-    var status = String(row[statusCol - 1] || '').trim();
-    if (!status) return;
+    var status = String(row[0] || '').trim();
+    if (!status) {
+      metrics.pending++;
+      return;
+    }
     metrics.total++;
 
-    switch (status) {
-      case STATUS.SENT:      metrics.sent++;      break;
-      case STATUS.FAILED:    metrics.failed++;     break;
-      case STATUS.PENDING:   metrics.pending++;    break;
-      case STATUS.SKIPPED:   metrics.skipped++;    break;
-      case STATUS.DUPLICATE: metrics.duplicate++;  break;
+    if (status.indexOf('Positive') !== -1) {
+      metrics.positive++;
+      metrics.replied++;
+      metrics.sent++;
+    } else if (status.indexOf('Replied') !== -1) {
+      metrics.replied++;
+      metrics.sent++;
+    } else if (status.indexOf('Clicked') !== -1) {
+      metrics.clicked++;
+      metrics.opened++;
+      metrics.sent++;
+    } else if (status.indexOf('Opened') !== -1) {
+      metrics.opened++;
+      metrics.sent++;
+    } else if (status === STATUS.SENT) {
+      metrics.sent++;
+    } else if (status === STATUS.BOUNCED) {
+      metrics.bounced++;
+    } else if (status === STATUS.BLOCKED) {
+      metrics.blocked++;
+    } else if (status === STATUS.FAILED) {
+      metrics.failed++;
+    } else if (status === STATUS.DUPLICATE) {
+      metrics.duplicate++;
+    } else if (status === STATUS.SKIPPED) {
+      metrics.skipped++;
+    } else {
+      metrics.pending++;
     }
-
-    if (openedCol   && (row[openedCol   - 1] === true || String(row[openedCol   - 1]).toLowerCase() === 'true')) metrics.opened++;
-    if (clickedCol  && (row[clickedCol  - 1] === true || String(row[clickedCol  - 1]).toLowerCase() === 'true')) metrics.clicked++;
-    if (repliedCol  && (row[repliedCol  - 1] === true || String(row[repliedCol  - 1]).toLowerCase() === 'true')) metrics.replied++;
-    if (positiveCol && (row[positiveCol - 1] === true || String(row[positiveCol - 1]).toLowerCase() === 'true')) metrics.positive++;
-    if (bouncedCol  && (row[bouncedCol  - 1] === true || String(row[bouncedCol  - 1]).toLowerCase() === 'true')) metrics.bounced++;
-    if (blockedCol  && (row[blockedCol  - 1] === true || String(row[blockedCol  - 1]).toLowerCase() === 'true')) metrics.blocked++;
   });
 
   return metrics;
 }
 
 /**
- * Returns the last row index that was successfully sent, so the UI
- * can suggest resuming from the next row.
+ * Returns the last row index that was processed, so the engine resumes
+ * from the next row without user intervention.
  */
 function getLastSentRow() {
   var sheet  = getDataSheet();
@@ -282,7 +347,10 @@ function getLastSentRow() {
   var statuses = sheet.getRange(2, statusCol, lastRow - 1, 1).getValues();
   var last = 1;
   statuses.forEach(function(row, i) {
-    if (row[0] === STATUS.SENT) last = i + 2; // i+2 because 1-indexed and header offset
+    var val = String(row[0] || '').trim();
+    if (val !== '' && val !== STATUS.PENDING) {
+      last = i + 2; // 1-indexed plus header row offset
+    }
   });
   return last;
 }
@@ -297,10 +365,11 @@ function getSheetNames() {
 }
 
 /**
- * Returns the list of non-MM_ column headers (for the column picker in UI).
+ * Returns data column headers (excluding internal status column).
  */
 function getDataColumns() {
   var headers = getHeaders();
-  return headers.filter(function(h) { return !h.startsWith('MM_'); });
+  return headers.filter(function(h) {
+    return h !== COL.STATUS && !h.startsWith('MM_');
+  });
 }
-

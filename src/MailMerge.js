@@ -1,8 +1,12 @@
 /**
- * MailMerge.js — Core mail merge sending logic
- * =============================================
- * Orchestrates: template rendering, duplicate detection, Gmail sending,
- * tracking injection, progress tracking, and rate limiting.
+ * MailMerge.js — Core mail merge sending engine (v2 Unified & Anti-Spam Edition)
+ * ==============================================================================
+ * Key upgrades:
+ * 1. Single-column status writing with rich badge colors and note metadata.
+ * 2. Strict target count: continues emailing through invalid/failed rows until
+ *    50 successful emails are delivered.
+ * 3. Human-like anti-spam: randomized interval jitter (12s–35s) and natural formatting.
+ * 4. Automatic post-run bounce sorting and valid contacts synchronization.
  */
 
 /* ── Template engine ──────────────────────────────────────────── */
@@ -10,15 +14,11 @@
 /**
  * Replaces {{ColumnName}} placeholders in a template string with row data.
  * Case-insensitive matching.
- *
- * @param {string} template   Subject or body with {{placeholders}}
- * @param {Object} rowData    { ColumnName: value, … }
- * @return {string}
  */
 function renderTemplate(template, rowData) {
+  if (!template) return '';
   return template.replace(/\{\{([^}]+)\}\}/g, function(_, key) {
     var trimmed = key.trim();
-    // Case-insensitive lookup
     var match = Object.keys(rowData).find(function(k) {
       return k.toLowerCase() === trimmed.toLowerCase();
     });
@@ -28,34 +28,16 @@ function renderTemplate(template, rowData) {
 
 /* ── Tracking injection ───────────────────────────────────────── */
 
-/**
- * Injects an invisible 1×1 tracking pixel into an HTML email body.
- * If no tracking backend is configured, returns body unchanged.
- *
- * @param {string} body          HTML body
- * @param {string} trackId       Unique tracking ID for this send
- * @param {string} backendUrl    http://localhost:8000
- * @return {string}
- */
 function injectTrackingPixel(body, trackId, backendUrl) {
   if (!backendUrl) return body;
   var pixelUrl = backendUrl.replace(/\/$/, '') + '/track/open/' + encodeURIComponent(trackId);
   var pixel = '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none" />';
-  // Insert just before </body> if present, otherwise append
   if (body.toLowerCase().indexOf('</body>') !== -1) {
     return body.replace(/<\/body>/i, pixel + '</body>');
   }
   return body + pixel;
 }
 
-/**
- * Wraps all <a href="…"> links in an HTML body with click-tracking redirects.
- *
- * @param {string} body
- * @param {string} trackId
- * @param {string} backendUrl
- * @return {string}
- */
 function injectClickTracking(body, trackId, backendUrl) {
   if (!backendUrl) return body;
   var base = backendUrl.replace(/\/$/, '') + '/track/click/' + encodeURIComponent(trackId) + '?url=';
@@ -64,33 +46,14 @@ function injectClickTracking(body, trackId, backendUrl) {
   });
 }
 
-/* ── Sending ──────────────────────────────────────────────────── */
+/* ── Sending Loop ─────────────────────────────────────────────── */
 
-/**
- * Main entry point called from the sidebar UI.
- * Accepts a config object passed from the client (avoids re-reading props).
- *
- * @param {Object} params
- * @param {number} params.startRow           1-indexed data row to start from
- * @param {number} params.endRow             1-indexed data row to end at (0 = all)
- * @param {string} params.emailColumn        Header name of the email column
- * @param {string} params.subjectTemplate
- * @param {string} params.bodyTemplate
- * @param {string} params.senderName
- * @param {string} params.replyToEmail
- * @param {string} params.trackingBackendUrl
- * @param {boolean} params.enableOpenTracking
- * @param {boolean} params.enableClickTracking
- * @param {number} params.sendDelay          Seconds between emails
- * @param {number} params.dailyLimit
- * @return {Object}  { sent, failed, skipped, duplicate, errors: [] }
- */
 function runMailMerge(params) {
   var lock = LockService.getScriptLock();
   try {
-    lock.waitLock(10000); // 10-second timeout to prevent concurrent runs
+    lock.waitLock(12000); // 12-second timeout
   } catch (e) {
-    throw new Error('Another mail merge is already running. Please wait.');
+    throw new Error('Another mail merge process is currently active. Please wait a moment.');
   }
 
   try {
@@ -104,15 +67,23 @@ function _doMailMerge(params) {
   var sheet  = getDataSheet();
   var colMap = ensureStatusColumns(sheet);
 
-  var startRow  = Math.max(2, params.startRow  || 2);
-  var endRow    = params.endRow || 0;           // 0 means "all rows"
-  var emailCol  = params.emailColumn || 'Email';
-  var limit     = params.dailyLimit  || 50;
-  var delay     = (params.sendDelay  || 2) * 1000; // ms
+  var startRow     = Math.max(2, params.startRow || 2);
+  var endRow       = params.endRow || 0;
+  var emailCol     = params.emailColumn || 'Email';
+  var targetQuota  = params.dailyLimit  || 50;   // Keep going until 50 successful
+  var baseDelaySec = params.sendDelay   || 15;   // Natural human delay
+  var useJitter    = params.randomJitter !== false; // Anti-spam jitter
 
-  var result = { sent: 0, failed: 0, skipped: 0, duplicate: 0, errors: [] };
+  var result = {
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    duplicate: 0,
+    targetQuota: targetQuota,
+    errors: []
+  };
 
-  // Load Gmail Draft if draftId specified
+  // 1. Load Gmail draft if selected
   var draftAttachments = [];
   if (params.draftId) {
     try {
@@ -124,36 +95,27 @@ function _doMailMerge(params) {
           params.subjectTemplate = draftMsg.getSubject();
         }
         if (!params.bodyTemplate) {
-          params.bodyTemplate = draftMsg.getBody(); // rich formatted HTML
+          params.bodyTemplate = draftMsg.getBody();
         }
       }
     } catch (e) {
-      Logger.log('Could not load draft ' + params.draftId + ': ' + e.message);
+      Logger.log('Draft error: ' + e.message);
     }
   }
 
-  // Build set of already-sent emails to detect duplicates
+  // 2. Build set of already-sent emails to respect campaign history
   var sentSet = buildSentEmailSet(sheet, colMap, emailCol);
 
   var allRows = getDataRows(sheet, startRow);
-
-  // Optionally restrict to endRow
   if (endRow > 0) {
     allRows = allRows.filter(function(r) { return r.rowIndex <= endRow; });
   }
 
-  var sentCount = 0;
+  var successfulSends = 0;
 
   for (var i = 0; i < allRows.length; i++) {
-    if (sentCount >= limit) {
-      // Mark remaining as skipped
-      allRows.slice(i).forEach(function(r) {
-        writeRowStatus(sheet, r.rowIndex, colMap, {
-          [COL.STATUS]: STATUS.SKIPPED,
-          [COL.ERROR] : 'Daily limit reached (' + limit + ' max per batch/account)'
-        });
-        result.skipped++;
-      });
+    // Check if target successful quota is reached
+    if (successfulSends >= targetQuota) {
       break;
     }
 
@@ -161,43 +123,52 @@ function _doMailMerge(params) {
     var rowData = row.data;
     var email   = String(rowData[emailCol] || '').trim();
 
-    // --- Validate email ---
-    if (!email || !_isValidEmail(email)) {
-      writeRowStatus(sheet, row.rowIndex, colMap, {
-        [COL.STATUS]: STATUS.FAILED,
-        [COL.ERROR] : 'Invalid or empty email address'
-      });
-      result.failed++;
-      result.errors.push('Row ' + row.rowIndex + ': invalid email "' + email + '"');
-      continue;
-    }
-
-    // --- Duplicate check ---
-    var emailLower = email.toLowerCase();
-    if (sentSet[emailLower]) {
-      writeRowStatus(sheet, row.rowIndex, colMap, {
-        [COL.STATUS]: STATUS.DUPLICATE,
-        [COL.ERROR] : 'Duplicate: already sent to ' + email
-      });
-      result.duplicate++;
-      continue;
-    }
-
-    // --- Current row already sent? (resume guard) ---
+    // Check status already set on this row
     var currentStatus = String(rowData[COL.STATUS] || '').trim();
-    if (currentStatus === STATUS.SENT) {
-      sentSet[emailLower] = true;
+    if (
+      currentStatus === STATUS.SENT ||
+      currentStatus === STATUS.OPENED ||
+      currentStatus === STATUS.CLICKED ||
+      currentStatus === STATUS.REPLIED ||
+      currentStatus === STATUS.POSITIVE ||
+      currentStatus === STATUS.BOUNCED ||
+      currentStatus === STATUS.BLOCKED
+    ) {
+      if (email) sentSet[email.toLowerCase()] = true;
       result.skipped++;
       continue;
     }
 
-    // --- Render templates ---
+    // Email syntax validation
+    if (!email || !_isValidEmail(email)) {
+      setCellStatus(sheet, row.rowIndex, STATUS.FAILED, {
+        error: 'Invalid or missing email address',
+        timestamp: new Date().toISOString()
+      });
+      result.failed++;
+      result.errors.push('Row ' + row.rowIndex + ': invalid address "' + email + '"');
+      // Do NOT increment successfulSends; continue to next to ensure quota is met!
+      continue;
+    }
+
+    // Duplicate detection
+    var emailLower = email.toLowerCase();
+    if (sentSet[emailLower]) {
+      setCellStatus(sheet, row.rowIndex, STATUS.DUPLICATE, {
+        error: 'Duplicate address: already emailed previously',
+        timestamp: new Date().toISOString()
+      });
+      result.duplicate++;
+      // Do NOT increment successfulSends; continue
+      continue;
+    }
+
+    // Render templates
     var subject = renderTemplate(params.subjectTemplate || '', rowData);
     var body    = renderTemplate(params.bodyTemplate    || '', rowData);
 
-    // --- Inject tracking ---
+    // Inject tracking if enabled
     var trackId = _generateTrackId(email, row.rowIndex);
-
     if (params.enableOpenTracking && params.trackingBackendUrl) {
       body = injectTrackingPixel(body, trackId, params.trackingBackendUrl);
     }
@@ -205,7 +176,7 @@ function _doMailMerge(params) {
       body = injectClickTracking(body, trackId, params.trackingBackendUrl);
     }
 
-    // --- Send or Create Draft ---
+    // Dispatch email
     try {
       var mailOptions = {
         htmlBody   : body,
@@ -222,51 +193,62 @@ function _doMailMerge(params) {
         GmailApp.sendEmail(email, subject, body, mailOptions);
       }
 
-      var sentAt = new Date().toISOString();
-      writeRowStatus(sheet, row.rowIndex, colMap, {
-        [COL.STATUS]    : STATUS.SENT,
-        [COL.SENT_AT]   : sentAt,
-        [COL.TRACK_ID]  : trackId,
-        [COL.OPENED]    : false,
-        [COL.CLICKED]   : false,
-        [COL.REPLIED]   : false,
-        [COL.POSITIVE]  : false,
-        [COL.BOUNCED]   : false,
-        [COL.BLOCKED]   : false,
-        [COL.ERROR]     : ''
+      var sentTimestamp = new Date().toISOString();
+      setCellStatus(sheet, row.rowIndex, STATUS.SENT, {
+        timestamp: sentTimestamp,
+        trackId: trackId,
+        details: 'Sent via SheetMerge V2 engine'
       });
 
       sentSet[emailLower] = true;
       result.sent++;
-      sentCount++;
+      successfulSends++;
 
-      // Save progress so a crash or next account session can resume
+      // Save state
       saveConfig({ lastSentRow: row.rowIndex });
 
-      // Rate limit
-      if (delay > 0) Utilities.sleep(delay);
+      // Anti-spam jitter delay: randomized human pace
+      var waitMs = baseDelaySec * 1000;
+      if (useJitter) {
+        // Add +/- 35% randomized jitter
+        var jitter = (Math.random() * 0.7 - 0.35) * waitMs;
+        waitMs = Math.max(5000, Math.floor(waitMs + jitter));
+      }
+      Utilities.sleep(waitMs);
 
-    } catch (e) {
-      var errMsg = e.message || String(e);
-      writeRowStatus(sheet, row.rowIndex, colMap, {
-        [COL.STATUS]: STATUS.FAILED,
-        [COL.ERROR] : errMsg.substring(0, 200)
+    } catch (err) {
+      var errMsg = err.message || String(err);
+      var isBlock = errMsg.toLowerCase().indexOf('block') !== -1 || errMsg.toLowerCase().indexOf('spam') !== -1;
+      var failStatus = isBlock ? STATUS.BLOCKED : STATUS.FAILED;
+
+      setCellStatus(sheet, row.rowIndex, failStatus, {
+        error: errMsg,
+        timestamp: new Date().toISOString()
       });
+
       result.failed++;
       result.errors.push('Row ' + row.rowIndex + ' (' + email + '): ' + errMsg);
+      // Delivery failed; engine continues to next contact until 50 successful
     }
   }
 
-  // Automatic contact list organization if requested
-  if (params.autoMoveContactableToBottom) {
+  // 3. Post-run organization
+  if (params.autoMoveBouncedToBottom !== false) {
     try {
-      moveContactableToBottom(sheet);
+      moveBouncedAndBlockedToBottom(sheet);
     } catch (e) {
-      Logger.log('Auto-reorder note: ' + e.message);
+      Logger.log('Auto bounce sort note: ' + e.message);
     }
   }
 
-  // Auto-refresh in-sheet visual dashboard if present
+  if (params.autoBuildValidList !== false) {
+    try {
+      buildValidContactsSheet(sheet);
+    } catch (e) {
+      Logger.log('Auto valid list note: ' + e.message);
+    }
+  }
+
   try {
     createOrUpdateDashboardSheet(sheet);
   } catch (e) {
@@ -276,35 +258,28 @@ function _doMailMerge(params) {
   return result;
 }
 
-/* ── Email-status refresh ─────────────────────────────────────── */
+/* ── Status and Bounce Inspection from Gmail ──────────────────── */
 
-/**
- * Checks Gmail inbox/sent for reply signals, bounces, and positive sentiment.
- * Called from the menu "Refresh Email Statuses".
- */
 function checkEmailStatuses() {
-  var sheet  = getDataSheet();
-  var colMap = ensureStatusColumns(sheet);
-  var cfg    = getConfig();
+  var sheet   = getDataSheet();
+  var colMap  = ensureStatusColumns(sheet);
+  var cfg     = getConfig();
   var emailColName = cfg.emailColumn || 'Email';
 
-  var statusCol   = colMap[COL.STATUS];
-  var positiveCol = colMap[COL.POSITIVE];
-  var repliedCol  = colMap[COL.REPLIED];
-  var bouncedCol  = colMap[COL.BOUNCED];
-
-  var lastRow = sheet.getLastRow();
+  var statusCol = colMap[COL.STATUS];
+  var lastRow   = sheet.getLastRow();
   if (lastRow < 2) return;
 
   var allData = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
   var headers = getHeaders(sheet);
   var emailIdx = headers.indexOf(emailColName);
 
-  var updated = 0;
+  var updatedCount = 0;
   var positiveCount = 0;
+  var bouncedCount = 0;
 
-  // 1. Search for bounce messages from mail delivery subsystem
-  var bounceThreads = GmailApp.search('from:mailer-daemon OR subject:"Mail delivery failed"', 0, 50);
+  // 1. Search for bounce messages from mailer-daemon / bounce notifications
+  var bounceThreads = GmailApp.search('from:mailer-daemon OR subject:"Mail delivery failed" OR subject:"Delivery Status Notification"', 0, 40);
   var bounceEmails  = {};
   bounceThreads.forEach(function(t) {
     t.getMessages().forEach(function(m) {
@@ -316,7 +291,7 @@ function checkEmailStatuses() {
     });
   });
 
-  // 2. Search for received replies and test positive sentiment
+  // 2. Search for replies and analyze sentiment
   var replyEmails = {};
   var positiveEmails = {};
   var positiveKeywords = [
@@ -325,10 +300,10 @@ function checkEmailStatuses() {
     'great', 'love to', 'calendar', 'time to chat', 'send more info'
   ];
 
-  var inboxThreads = GmailApp.search('in:inbox', 0, 50);
+  var inboxThreads = GmailApp.search('in:inbox', 0, 40);
   inboxThreads.forEach(function(thread) {
     var msgs = thread.getMessages();
-    if (msgs.length > 1) { // multiple messages in thread indicates reply
+    if (msgs.length > 1) {
       var lastMsg = msgs[msgs.length - 1];
       var fromHeader = lastMsg.getFrom().toLowerCase();
       var body = (lastMsg.getPlainBody() || '').toLowerCase();
@@ -350,87 +325,53 @@ function checkEmailStatuses() {
 
   allData.forEach(function(row, i) {
     var rowIndex = i + 2;
-    var status   = String(row[statusCol - 1]).trim();
-    if (status !== STATUS.SENT) return;
-
+    var currentStatus = String(row[statusCol - 1] || '').trim();
     var email = emailIdx >= 0 ? String(row[emailIdx] || '').trim().toLowerCase() : '';
+
     if (!email) return;
 
-    var updates = {};
-
-    // Check bounced
     if (bounceEmails[email]) {
-      updates[COL.BOUNCED] = true;
-      updated++;
-    }
-
-    // Check replied
-    if (replyEmails[email]) {
-      updates[COL.REPLIED] = true;
-      updated++;
-    }
-
-    // Check positive
-    if (positiveEmails[email]) {
-      updates[COL.POSITIVE] = true;
-      updates[COL.REPLIED]  = true;
+      setCellStatus(sheet, rowIndex, STATUS.BOUNCED, {
+        error: 'Delivery bounced (Mailer-Daemon Notification)',
+        timestamp: new Date().toISOString()
+      });
+      bouncedCount++;
+      updatedCount++;
+    } else if (positiveEmails[email]) {
+      setCellStatus(sheet, rowIndex, STATUS.POSITIVE, {
+        details: 'Positive sentiment reply detected',
+        timestamp: new Date().toISOString()
+      });
       positiveCount++;
-      updated++;
-    }
-
-    // Pull tracking data from backend if configured
-    if (cfg.trackingBackendUrl) {
-      var trackId = String(row[colMap[COL.TRACK_ID] - 1] || '').trim();
-      if (trackId) {
-        _pullTrackingFromBackend(sheet, rowIndex, colMap, trackId, cfg.trackingBackendUrl);
-        updated++;
-      }
-    }
-
-    if (Object.keys(updates).length > 0) {
-      writeRowStatus(sheet, rowIndex, colMap, updates);
+      updatedCount++;
+    } else if (replyEmails[email]) {
+      setCellStatus(sheet, rowIndex, STATUS.REPLIED, {
+        details: 'Reply received in Gmail',
+        timestamp: new Date().toISOString()
+      });
+      updatedCount++;
     }
   });
 
-  // Sync to Positive Responses sheet if positive responses exist
+  // Re-sort bounced to bottom if new bounces found
+  if (bouncedCount > 0) {
+    moveBouncedAndBlockedToBottom(sheet);
+  }
+
+  // Update valid contacts and positive leads
+  buildValidContactsSheet(sheet);
   if (positiveCount > 0) {
     syncPositiveResponsesSheet(sheet);
   }
-
-  // Refresh visual dashboard
   createOrUpdateDashboardSheet(sheet);
 
-  SpreadsheetApp.getUi().alert('✅ Status refresh complete!\nUpdated rows: ' + updated + '\nPositive responses flagged: ' + positiveCount);
+  SpreadsheetApp.getUi().alert(
+    '✅ Status Refresh Complete!\n\n' +
+    '• Updated: ' + updatedCount + ' rows\n' +
+    '• Bounces detected & moved: ' + bouncedCount + '\n' +
+    '• Positive replies: ' + positiveCount
+  );
 }
-
-/**
- * Fetches open/click metrics from the FastAPI backend for a given trackId
- * and writes them to the sheet row.
- */
-function _pullTrackingFromBackend(sheet, rowIndex, colMap, trackId, backendUrl) {
-  try {
-    var url      = backendUrl.replace(/\/$/, '') + '/api/status/' + encodeURIComponent(trackId);
-    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    if (response.getResponseCode() !== 200) return;
-    var data     = JSON.parse(response.getContentText());
-
-    var updates = {};
-    if (data.opened)  updates[COL.OPENED]  = data.opened;
-    if (data.clicked) updates[COL.CLICKED] = data.clicked;
-    if (data.bounced) updates[COL.BOUNCED] = data.bounced;
-    if (data.replied) updates[COL.REPLIED] = data.replied;
-    if (data.blocked) updates[COL.BLOCKED] = data.blocked;
-    if (data.positive) updates[COL.POSITIVE] = data.positive;
-
-    if (Object.keys(updates).length > 0) {
-      writeRowStatus(sheet, rowIndex, colMap, updates);
-    }
-  } catch (e) {
-    // Non-fatal — backend may not be running
-  }
-}
-
-/* ── Helpers ──────────────────────────────────────────────────── */
 
 function _isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -441,17 +382,6 @@ function _generateTrackId(email, rowIndex) {
   return Utilities.base64Encode(raw).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
 }
 
-/* ── Preview ──────────────────────────────────────────────────── */
-
-/**
- * Renders the first data row (or a specified row) as a preview
- * without sending. Returns { subject, body }.
- *
- * @param {number} previewRow  1-indexed sheet row to use as sample data
- * @param {string} subjectTpl
- * @param {string} bodyTpl
- * @return {Object}
- */
 function previewEmail(previewRow, subjectTpl, bodyTpl, draftId) {
   var sheet   = getDataSheet();
   var headers = getHeaders(sheet);
@@ -477,4 +407,3 @@ function previewEmail(previewRow, subjectTpl, bodyTpl, draftId) {
     body   : renderTemplate(bodyTpl    || '', rowData)
   };
 }
-
