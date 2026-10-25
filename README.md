@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT">
 </p>
 
-<h1 align="center">✉️ SheetMerge Enterprise (v2.1)</h1>
+<h1 align="center">✉️ SheetMerge (v2.1)</h1>
 <p align="center"><strong>The Modern, Spam-Resistant Mail Merge Suite — Dual Platform: Google Sheets Add-on & Standalone Web Application</strong></p>
 <p align="center">
   <em>Featuring a single, YAMM-compatible <strong>Merge Status</strong> column, automatic multi-column consolidation, guaranteed 50 valid daily deliveries, native light/dark UI, 5xx permanent bounce suppression, and enterprise SPF/DKIM/DMARC deliverability guard.</em>
