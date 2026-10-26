@@ -81,7 +81,6 @@ Most legacy mail merge tools either overwhelm users with tall, stacked forms of 
 ```
 
 ---
-
 ## 🛠️ How It Works (3 Simplistic Steps)
 
 1. **Write your draft in Gmail**:
